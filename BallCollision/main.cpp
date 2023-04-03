@@ -1,6 +1,8 @@
 #include "SFML/Graphics.hpp"
 #include "MiddleAverageFilter.h"
 #include <iostream>
+#include <numeric>
+#include <functional>
 #include <assert.h>
 
 constexpr int WINDOW_X = 1024;
@@ -60,7 +62,6 @@ void draw_fps(sf::RenderWindow& window, float fps)
 {
     char c[32];
     snprintf(c, 32, "FPS: %f", fps);
-    //std::string string(c);
     sf::String str(c);
     window.setTitle(str);
 }
@@ -154,7 +155,7 @@ bool is_touching(const Line& line, const Ball& ball)
 }
 
 
-bool calc_collision(const Line & line, const Ball & ball, sf::Vector2f & dp)
+void calc_collision(const Line & line, const Ball & ball, std::vector<sf::Vector2f> & dps)
 {
     auto pos_proj = project(line, ball.p);
     auto ball_to_wall = pos_proj - ball.p;
@@ -163,7 +164,7 @@ bool calc_collision(const Line & line, const Ball & ball, sf::Vector2f & dp)
 
     if (d > ball.r + 1e-3)
     {
-        return false;
+        return;
     }
 
     sf::Vector2f p0 = ball.impulse();
@@ -173,19 +174,28 @@ bool calc_collision(const Line & line, const Ball & ball, sf::Vector2f & dp)
     float a = std::abs(angle(ball_to_wall, p0));
     if (a >= M_PI / 2)
     {
-        return false;
+        return;
     }
 
-    dp += -2.f * pn;
-    
-    //std::cout << a << "\t" << normalized(p0) << "\t" << normalized(ball_to_wall)  << "\t" << dp << std::endl;;
-
-    return true;
+    auto dp = -2.f * pn;
+    if (norm(dp) > 1e-6)
+    {
+        dps.push_back(dp);
+    }
 }
 
-void apply_collision(Ball & ball, const sf::Vector2f & dp)
+template<typename T>
+sf::Vector2<T> average(const std::vector<sf::Vector2<T>>& items)
+{
+    return std::accumulate(items.begin(), items.end(), sf::Vector2<T>(0, 0)) / static_cast<T>(items.size());
+}
+
+void apply_collision(Ball & ball, const std::vector<sf::Vector2f> & dps)
 {
     auto p0 = ball.impulse();
+
+    sf::Vector2f dp = average(dps);
+
     auto p2 = p0 + dp;
 
     auto adp = std::abs(norm(p0) - norm(p2));
@@ -232,13 +242,6 @@ int main()
     sf::Vector2f br(WINDOW_X, WINDOW_Y);
     sf::Vector2f bl(0, WINDOW_Y);
 
-    //{
-    //    Ball ball;
-    //    ball.r = 10;
-    //    ball.p = tr;
-    //    balls.push_back(ball);
-    //}
-
     std::vector<Line> walls = 
     {
         Line(tl, tr),
@@ -273,39 +276,25 @@ int main()
         /// Как можно было-бы улучшить текущую архитектуру кода?
         /// Данный код является макетом, вы можете его модифицировать по своему усмотрению
 
-        std::vector<Ball> projections(walls.size());
-
         {
             for (Ball& ball : balls)
             {
                 bool collides = false;
-                sf::Vector2f dp(0, 0);
-                //std::cout << std::endl;
+                std::vector<sf::Vector2f> dps;
                 for (int i = 0; i < walls.size(); ++i)
                 {
-                    if (i != 2)
-                    {
-                        //continue;
-                    }
-
                     collides |= is_touching(walls[i], ball);
-                    calc_collision(walls[i], ball, dp);
-                    
-                    projections[i] = ball;
-                    projections[i].p = project(walls[i], ball.p);
-                    projections[i].color = sf::Color::Green;
-                    //std::cout << i << " " << projections[i].p << std::endl;
+                    calc_collision(walls[i], ball, dps);
                 }
-                
-                //std::cout << dp << std::endl;
 
                 ball.color = collides ? sf::Color::Red : sf::Color::White;
-                if (norm(dp) > 1e-6)
+                if (!dps.empty())
                 {
-                    //std::cout << dp << std::endl;
-                    apply_collision(ball, dp);
+                    apply_collision(ball, dps);
                 }
             }
+
+
         }
 
         for (auto& ball : balls)
@@ -314,11 +303,6 @@ int main()
         }
 
         window.clear();
-
-        //for (const auto& ball : projections)
-        //{
-        //    draw_ball(window, ball);
-        //}
 
         for (const auto & ball : balls)
         {
