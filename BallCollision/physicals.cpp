@@ -4,7 +4,6 @@
 uint32_t Physical::next_id = 0;
 
 
-
 static bool are_touching(const Line& line, const Ball& ball)
 {
     return norm(project(line, ball.p) - ball.p) <= ball.r;
@@ -57,17 +56,6 @@ void Ball::apply_reactions()
     dir = normalized(v);
 }
 
-bool Line::is_touching(const Physical* other) const
-{
-    const Ball* other_as_ball = dynamic_cast<const Ball*>(other);
-    if (other_as_ball != nullptr)
-    {
-        return are_touching(*this, *other_as_ball);
-    }
-    throw std::logic_error("Not implemented");
-}
-
-
 void Ball::handle_collision(Physical* other)
 {
     auto other_line = dynamic_cast<Line*>(other);
@@ -112,6 +100,19 @@ void Ball::handle_collision(Physical* other)
 
         return;
     }
+
+    throw std::logic_error("Not implemented");
+}
+
+
+bool Line::is_touching(const Physical* other) const
+{
+    const Ball* other_as_ball = dynamic_cast<const Ball*>(other);
+    if (other_as_ball != nullptr)
+    {
+        return are_touching(*this, *other_as_ball);
+    }
+    throw std::logic_error("Not implemented");
 }
 
 
@@ -129,4 +130,6 @@ void Line::handle_collision(Physical* other)
         other_ball->handle_collision(this);
         return;
     }
+
+    throw std::logic_error("Not implemented");
 }
