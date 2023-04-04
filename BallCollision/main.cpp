@@ -9,7 +9,7 @@ constexpr int WINDOW_X = 1024;
 constexpr int WINDOW_Y = 768;
 constexpr int MAX_BALLS = 300;
 constexpr int MIN_BALLS = 100;
-constexpr float M_PI = 3.14159265358979323846f;
+constexpr float M_PI = 3.14159265358979323846f; // ??
 
 Math::MiddleAverageFilter<float, 100> fpscounter;
 
@@ -21,7 +21,6 @@ std::ostream& operator<<(std::ostream& os, const sf::Vector2<T>& v)
 }
 
 
-
 struct Ball
 {
     sf::Vector2f p = {0, 0};
@@ -30,6 +29,11 @@ struct Ball
     float speed = 0;
     sf::Color color = sf::Color::White;
     
+    float mass() const 
+    {
+        return r * r * r; // consider mass to be a function of volume just to make interactions a little bit easier to perceive and comprehend
+    }
+
     sf::Vector2f velocity() const
     {
         return speed * dir;
@@ -37,8 +41,10 @@ struct Ball
 
     sf::Vector2f impulse() const
     {
-        return velocity() * r;
+        return velocity() * mass();
     }
+
+    std::vector<sf::Vector2f> dps = {};
 };
 
 void draw_ball(sf::RenderWindow& window, const Ball& ball)
@@ -148,24 +154,21 @@ float dist(const Line & l, const sf::Vector2f& p)
 }
 
 
-
 bool is_touching(const Line& line, const Ball& ball)
 {
     return norm(project(line, ball.p) - ball.p) <= ball.r;
 }
 
+bool is_touching(const Ball& b1, const Ball& b2)
+{
+    return norm(b1.p - b2.p) <= (b1.r + b2.r);
+}
 
-void calc_collision(const Line & line, const Ball & ball, std::vector<sf::Vector2f> & dps)
+
+void calc_collision(const Line & line, Ball & ball)
 {
     auto pos_proj = project(line, ball.p);
     auto ball_to_wall = pos_proj - ball.p;
-    float d = norm(ball_to_wall);
-    //std::cout << d << "\t";
-
-    if (d > ball.r + 1e-3)
-    {
-        return;
-    }
 
     sf::Vector2f p0 = ball.impulse();
     sf::Vector2f pn = project(p0, ball_to_wall);
@@ -180,7 +183,34 @@ void calc_collision(const Line & line, const Ball & ball, std::vector<sf::Vector
     auto dp = -2.f * pn;
     if (norm(dp) > 1e-6)
     {
-        dps.push_back(dp);
+        ball.dps.push_back(dp);
+    }
+}
+
+void calc_collision(Ball& b1, Ball& b2)
+{
+    auto v1 = b1.velocity();
+    auto v2 = b2.velocity();
+
+    auto m1 = b1.mass();
+    auto m2 = b2.mass();
+
+    if (dist(b1.p + b1.dir, b2.p + b2.dir) >= dist(b1.p, b2.p))
+    {
+        return;
+    }
+
+    auto dv1 = (m2 * v2 * 2.f + v1 * (m1 - m2)) / (m1 + m2) - v1;
+    sf::Vector2f dv2 = (m1 * v1 * 2.f + v2 * (m2 - m1)) / (m1 + m2) - v2;
+
+    if (norm(dv1) > 1e-6)
+    {
+        b1.dps.push_back(dv1 * m1);
+    }
+
+    if (norm(dv2) > 1e-6)
+    {
+        b2.dps.push_back(dv2 * m2);
     }
 }
 
@@ -190,19 +220,20 @@ sf::Vector2<T> average(const std::vector<sf::Vector2<T>>& items)
     return std::accumulate(items.begin(), items.end(), sf::Vector2<T>(0, 0)) / static_cast<T>(items.size());
 }
 
-void apply_collision(Ball & ball, const std::vector<sf::Vector2f> & dps)
+void apply_collision(Ball & ball)
 {
     auto p0 = ball.impulse();
 
-    sf::Vector2f dp = average(dps);
+    sf::Vector2f dp = average(ball.dps);
+    ball.dps.clear();
 
     auto p2 = p0 + dp;
 
     auto adp = std::abs(norm(p0) - norm(p2));
 
-    assert(adp < 1e-2); // impulse conservation "law"
+    //assert(adp < 1e-2); // impulse conservation "law"
 
-    auto v = p2 / ball.r;
+    auto v = p2 / ball.mass();
     ball.speed = norm(v);
     ball.dir = normalized(v);
 }
@@ -226,16 +257,14 @@ int main()
         newBall.dir.y = (-5 + (rand() % 10)) / 3.;
         newBall.r = 5 + rand() % 5;
         newBall.speed = (30 + rand() % 30) * 1;
+
         balls.push_back(newBall);
     }
      
-
-
-     window.setFramerateLimit(60);
+    window.setFramerateLimit(60);
 
     sf::Clock clock;
     float lastime = clock.restart().asSeconds();
-
 
     sf::Vector2f tl(0, 0);
     sf::Vector2f tr(WINDOW_X, 0);
@@ -277,24 +306,37 @@ int main()
         /// Данный код является макетом, вы можете его модифицировать по своему усмотрению
 
         {
-            for (Ball& ball : balls)
+            for (int i = 0; i < balls.size(); ++i)
             {
-                bool collides = false;
-                std::vector<sf::Vector2f> dps;
-                for (int i = 0; i < walls.size(); ++i)
+                for (int j = 0; j < walls.size(); ++j)
                 {
-                    collides |= is_touching(walls[i], ball);
-                    calc_collision(walls[i], ball, dps);
+                    if (is_touching(walls[j], balls[i]))
+                    {
+                        calc_collision(walls[j], balls[i]);
+                    }
                 }
 
-                ball.color = collides ? sf::Color::Red : sf::Color::White;
-                if (!dps.empty())
+                for (int j = i + 1; j < balls.size(); ++j) // n^2 
                 {
-                    apply_collision(ball, dps);
+                    if (is_touching(balls[j], balls[i]))
+                    {
+                        calc_collision(balls[j], balls[i]);
+                    }
                 }
             }
 
-
+            for (auto& ball : balls)
+            {
+                if (!ball.dps.empty())
+                {
+                    apply_collision(ball);
+                    ball.color = sf::Color::Red;
+                }
+                else
+                {
+                    ball.color = sf::Color::White;
+                }
+            }
         }
 
         for (auto& ball : balls)
