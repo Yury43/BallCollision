@@ -278,7 +278,7 @@ int main()
         Line(bl, tl),
     };
 
-    float max_r = std::max_element(balls.begin(), balls.end(), [](const auto& a, const auto& b) { return a.r < b.r; })->r;
+    float max_r = balls.empty() ? 0 : std::max_element(balls.begin(), balls.end(), [](const auto& a, const auto& b) { return a.r < b.r; })->r;
 
     while (window.isOpen())
     {
