@@ -51,7 +51,6 @@ void draw_fps(sf::RenderWindow& window, float fps)
 }
 
 
-
 class Collision
     {
 
@@ -59,19 +58,22 @@ public:
 
     const uint64_t cid;
 
-    Collision(Physical* p1, Physical* p2) : party1(p1), party2(p2), cid(make_id(p1, p2))
+    Collision(
+        const std::shared_ptr<Physical> & p1, 
+        const std::shared_ptr<Physical> & p2) 
+        : party1(p1), party2(p2), cid(make_id(p1, p2))
     {
         
     }
 
     bool are_touching() const 
     {
-        return party1->is_touching(party2);
+        return party1->is_touching(party2.get());
     }
 
     void handle()
     {
-        party1->handle_collision(party2);
+        party1->handle_collision(party2.get());
     }
 
     void mark_started() const
@@ -87,10 +89,10 @@ public:
     }
 
 private:
-    Physical* party1 = nullptr;
-    Physical* party2 = nullptr;
+    std::shared_ptr<Physical> party1;
+    std::shared_ptr<Physical> party2;
 
-    uint64_t make_id(Physical* p1, Physical* p2)
+    uint64_t make_id(const std::shared_ptr<Physical> & p1, const std::shared_ptr<Physical> & p2)
     {
         int high = p1->id;
         int low = p2->id;
@@ -134,11 +136,12 @@ int main()
     {
         balls.push_back(std::make_shared<Ball>());
 
-        balls.back()->p.x = rand() % WINDOW_X;
-        balls.back()->p.y = rand() % WINDOW_Y;
+        int r = 5 + rand() % 5;
+        balls.back()->r = r;
+        balls.back()->p.x = (r + rand()) % (WINDOW_X - r); // make sure balls dont spawn on the edges 
+        balls.back()->p.y = (r + rand()) % (WINDOW_Y - r);
         balls.back()->dir.x = (-5 + (rand() % 10)) / 3.;
         balls.back()->dir.y = (-5 + (rand() % 10)) / 3.;
-        balls.back()->r = 5 + rand() % 5;
         balls.back()->speed = (30 + rand() % 30) * 1;
     }
      
@@ -152,12 +155,12 @@ int main()
     sf::Vector2f br(WINDOW_X, WINDOW_Y);
     sf::Vector2f bl(0, WINDOW_Y);
 
-    std::vector<Line> walls = 
+    std::vector<std::shared_ptr<Line>> walls =
     {
-        Line(tl, tr),
-        Line(tr, br),
-        Line(br, bl),
-        Line(bl, tl),
+         std::make_shared<Line>(tl, tr),
+         std::make_shared<Line>(tr, br),
+         std::make_shared<Line>(br, bl),
+         std::make_shared<Line>(bl, tl),
     };
 
     float max_r = balls.empty() ? 0 : (*std::max_element(balls.begin(), balls.end(), [](const auto& a, const auto& b) { return a->r < b->r; }))->r;
@@ -189,8 +192,40 @@ int main()
         /// Как можно было-бы улучшить текущую архитектуру кода?
         /// Данный код является макетом, вы можете его модифицировать по своему усмотрению
 
-        // n log (n) complexity on average, because candidates are considered only in a limited (max_r * 2) X window to right 
-        std::sort(balls.begin(), balls.end(), [](const auto & a, const auto & b) { return a->p.x < b->p.x; });
+
+        // Reduce time complexity by placing balls in a grid of bins, only balls in the same bin and its neighbors may interact
+
+        float bin_size = max_r * 4;
+        int n_bins_x = std::ceil(WINDOW_X / bin_size) + 2;
+        int n_bins_y = std::ceil(WINDOW_Y / bin_size) + 2;
+
+        using BallBin = std::vector<std::shared_ptr<Ball>>;
+        std::vector<std::vector<BallBin>> bins(n_bins_x, std::vector<BallBin>(n_bins_y));
+
+        auto find_bin_x = [bin_size, n_bins_x](const Ball& b) {return static_cast<int>(std::round(b.p.x / bin_size)) + 1; };
+        auto find_bin_y = [bin_size, n_bins_y](const Ball& b) {return static_cast<int>(std::round(b.p.y / bin_size)) + 1; };
+        auto out_of_range = [n_bins_x, n_bins_y](int bin_x, int bin_y) {return bin_x < 0 or bin_x >= n_bins_x or bin_y < 0 or bin_y >= n_bins_y; };
+        
+        // place balls in bins, delete those that escaped 
+        {
+            auto ball_it = balls.begin();
+            while (ball_it != balls.end())
+            {
+                int bin_x = find_bin_x(**ball_it);
+                int bin_y = find_bin_y(**ball_it);
+
+                if (out_of_range(bin_x, bin_y))
+                {
+                    std::cout << "Ball " << (*ball_it)->id << " " << (*ball_it)->p << " escaped to [" << bin_x << ", " << bin_y << "] !" << std::endl;
+                    ball_it = balls.erase(ball_it);
+                }
+                else
+                {
+                    bins[bin_x][bin_y].push_back(*ball_it);
+                    ++ball_it;
+                }
+            }
+        }
 
         {
             // remove processed collisions parties of which do not touch anymore 
@@ -212,26 +247,40 @@ int main()
 
             std::vector<Collision> new_collisions;
 
-            for (int i = 0; i < balls.size(); ++i)
+            for (const auto& ball : balls)
             {
-                for (int j = 0; j < walls.size(); ++j)
+                for (const auto& wall : walls)
                 {
-                    if (balls[i]->is_touching(&walls[j]))
+                    if (ball->is_touching(wall.get()))
                     {
-                        new_collisions.push_back(Collision(balls[i].get(), &walls[j]));
+                        new_collisions.push_back(Collision(ball, wall));
                     }
                 }
+            }
 
-                for (int j = i + 1; j < balls.size(); ++j) 
+
+            for (auto& ball : balls)
+            {
+                size_t bin_x = find_bin_x(*ball);
+                size_t bin_y = find_bin_y(*ball);
+
+                for (int i = 0; i < 2; ++i)
                 {
-                    if (balls[j]->p.x - balls[i]->p.x > max_r + balls[i]->r)
+                    for (int j = 0; j < 2; ++j)
                     {
-                        break; // skip balls that are surely out of reach
-                    }
-
-                    if (balls[j]->is_touching(balls[i].get()))
-                    {
-                        new_collisions.push_back(Collision(balls[i].get(), balls[j].get()));
+                        if (!out_of_range(bin_x + i, bin_y + j))
+                        {
+                            for (auto& other_ball : bins[bin_x + i][bin_y + j])
+                            {
+                                if (ball->id != other_ball->id)
+                                {
+                                    if (ball->is_touching(other_ball.get()))
+                                    {
+                                        new_collisions.push_back(Collision(ball, other_ball));
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
