@@ -1,7 +1,6 @@
 #include "SFML/Graphics.hpp"
 #include "MiddleAverageFilter.h"
 #include <iostream>
-#include <numeric>
 #include <unordered_set>
 #include <functional>
 #include <assert.h>
@@ -52,29 +51,6 @@ void draw_fps(sf::RenderWindow& window, float fps)
 }
 
 
-template<typename T>
-sf::Vector2<T> average(const std::vector<sf::Vector2<T>>& items)
-{
-    return std::accumulate(items.begin(), items.end(), sf::Vector2<T>(0, 0)) / static_cast<T>(items.size());
-}
-
-void apply_reactions(Ball & ball)
-{
-    auto p0 = ball.impulse();
-
-    sf::Vector2f dp = average(ball.reactions);
-    ball.reactions.clear();
-
-    auto p2 = p0 + dp;
-
-    auto adp = std::abs(norm(p0) - norm(p2));
-
-    //assert(adp < 1e-2); // impulse conservation "law"
-
-    auto v = p2 / ball.mass();
-    ball.speed = norm(v);
-    ball.dir = normalized(v);
-}
 
 class Collision
     {
@@ -95,62 +71,19 @@ public:
 
     void handle()
     {
-        {
-            auto p1 = dynamic_cast<Ball*>(party1);
-            auto p2 = dynamic_cast<Ball*>(party2);
-            if (p1 != nullptr and p2 != nullptr)
-            {
-                handle(*p1, *p2);
-                return;
-            }
-        }
-        {
-            auto p1 = dynamic_cast<Line*>(party1);
-            auto p2 = dynamic_cast<Ball*>(party2);
-            if (p1 != nullptr and p2 != nullptr)
-            {
-                handle(*p1, *p2);
-                return;
-            }
-        }
-        {
-            auto p1 = dynamic_cast<Ball*>(party1);
-            auto p2 = dynamic_cast<Line*>(party2);
-            if (p1 != nullptr and p2 != nullptr)
-            {
-                handle(*p2, *p1);
-                return;
-            }
-        }
-        throw std::logic_error("Not implemented");
+        party1->handle_collision(party2);
     }
 
-    void mark_start() const
+    void mark_started() const
     {
-        auto p1 = dynamic_cast<Ball*>(party1);
-        auto p2 = dynamic_cast<Ball*>(party2);
-        if (p1 != nullptr)
-        {
-            p1->color = sf::Color::Red;
-        }
-        if (p2 != nullptr)
-        {
-            p2->color = sf::Color::Red;
-        }
+        party1->mark_colliding(true);
+        party2->mark_colliding(true);
     }
 
-    void mark_finish() const
+    void mark_finished() const
     {
-        auto p1 = dynamic_cast<Ball*>(party1);
-        auto p2 = dynamic_cast<Ball*>(party2);
-        if (p1 != nullptr)
-        {
-            p1->color = sf::Color::White;
-        }
-        if (p2 != nullptr)
-        {
-            p2->color = sf::Color::White;
-        }
+        party1->mark_colliding(false);
+        party2->mark_colliding(false);
     }
 
 private:
@@ -161,45 +94,13 @@ private:
     {
         int high = p1->id;
         int low = p2->id;
+
+        if (high > low) // make collisions of same objects identical 
+        {
+            std::swap(low, high);
+        }
+
         return (((uint64_t)high) << 32) | ((uint64_t)low);
-    }
-
-    void handle(const Line& line, Ball& ball)
-    {
-        auto pos_proj = project(line, ball.p);
-        auto ball_to_wall = pos_proj - ball.p;
-
-        sf::Vector2f p0 = ball.impulse();
-        sf::Vector2f pn = project(p0, ball_to_wall);
-
-        auto dp = -2.f * pn;
-        if (norm(dp) > 1e-6)
-        {
-            ball.reactions.push_back(dp);
-        }
-    }
-
-    void handle(Ball& b1, Ball& b2)
-    {
-        auto v1 = b1.velocity();
-        auto v2 = b2.velocity();
-
-        auto m1 = b1.mass();
-        auto m2 = b2.mass();
-
-
-        auto dv1 = (m2 * v2 * 2.f + v1 * (m1 - m2)) / (m1 + m2) - v1;
-        sf::Vector2f dv2 = (m1 * v1 * 2.f + v2 * (m2 - m1)) / (m1 + m2) - v2;
-
-        if (norm(dv1) > 1e-6)
-        {
-            b1.reactions.push_back(dv1 * m1);
-        }
-
-        if (norm(dv2) > 1e-6)
-        {
-            b2.reactions.push_back(dv2 * m2);
-        }
     }
 };
 
@@ -303,7 +204,7 @@ int main()
                     }
                     else
                     {
-                        it->mark_finish();
+                        it->mark_finished();
                         it = processed_collisions.erase(it);
                     }
                 }
@@ -315,9 +216,9 @@ int main()
             {
                 for (int j = 0; j < walls.size(); ++j)
                 {
-                    if (are_touching(walls[j], *balls[i]))
+                    if (balls[i]->is_touching(&walls[j]))
                     {
-                        new_collisions.push_back(Collision((Physical*) balls[i].get(), (Physical*) &walls[j]));
+                        new_collisions.push_back(Collision(balls[i].get(), &walls[j]));
                     }
                 }
 
@@ -328,9 +229,9 @@ int main()
                         break; // skip balls that are surely out of reach
                     }
 
-                    if (are_touching(*balls[j], *balls[i]))
+                    if (balls[j]->is_touching(balls[i].get()))
                     {
-                        new_collisions.push_back(Collision((Physical*) balls[i].get(), (Physical*) balls[j].get()));
+                        new_collisions.push_back(Collision(balls[i].get(), balls[j].get()));
                     }
                 }
             }
@@ -341,7 +242,7 @@ int main()
                 if (processed_collisions.find(collision) == processed_collisions.end())
                 {
                     collision.handle();
-                    collision.mark_start();
+                    collision.mark_started();
                     processed_collisions.insert(std::move(collision));
                 }
             }
@@ -349,10 +250,7 @@ int main()
             // apply new reactions 
             for (auto& ball : balls)
             {
-                if (!ball->reactions.empty())
-                {
-                    apply_reactions(*ball);
-                }
+                ball->apply_reactions();
             }
         }
 

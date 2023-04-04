@@ -4,30 +4,32 @@
 #include <vector>
 #include "math.h"
 
-struct Physical
+class Physical
 {
+public:
     const uint32_t id;
     Physical() : id(next_id++) {};
 
-    virtual ~Physical()
-    {
-
-    }
+    virtual ~Physical(){}
 
     virtual bool is_touching(const Physical* other) const = 0;
+    virtual void mark_colliding(bool is_colliding) {};
+    virtual void handle_collision(Physical* other) = 0;
 
 private:
     static uint32_t next_id;
 };
 
 
-struct Ball : public Physical
+class Ball : public Physical
 {
+public:
     sf::Vector2f p = { 0, 0 };
     sf::Vector2f dir = { 0, 0 };
     float r = 0;
     float speed = 0;
     sf::Color color = sf::Color::White;
+    std::vector<sf::Vector2f> reactions = {};
 
     Ball() : Physical() {};
 
@@ -51,29 +53,30 @@ struct Ball : public Physical
         return velocity() * mass();
     }
 
-    std::vector<sf::Vector2f> reactions = {};
-
     bool is_touching(const Physical* other) const override;
+    void mark_colliding(bool is_colliding) override;
+    void handle_collision(Physical* other) override;
+    void apply_reactions();
 };
 
 
-struct Line : public Physical
+class Line: public Physical
 {
+public:
     sf::Vector2f p1;
     sf::Vector2f p2;
     sf::Vector2f n;
 
-    Line(const sf::Vector2f& _p1, const sf::Vector2f& _p2) : Physical(), p1(_p1), p2(_p2), n(normalized(p2 - p1))
+    Line(const sf::Vector2f& _p1, const sf::Vector2f& _p2) 
+        : Physical(), p1(_p1), p2(_p2), n(normalized(p2 - p1))
     {
 
     }
 
-    virtual ~Line()
-    {
-
-    }
+    virtual ~Line(){}
 
     bool is_touching(const Physical* other) const override;
+    void handle_collision(Physical* other) override;
 };
 
 static sf::Vector2f project(const Line& l, const sf::Vector2f& p)
@@ -96,15 +99,6 @@ static float dist(const Line& l, const sf::Vector2f& p)
 }
 
 
-static bool are_touching(const Line& line, const Ball& ball)
-{
-    return norm(project(line, ball.p) - ball.p) <= ball.r;
-}
 
-
-static bool are_touching(const Ball& b1, const Ball& b2)
-{
-    return norm(b1.p - b2.p) <= (b1.r + b2.r);
-}
 
 
