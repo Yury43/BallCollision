@@ -9,9 +9,11 @@ constexpr int WINDOW_X = 1024;
 constexpr int WINDOW_Y = 768;
 constexpr int MAX_BALLS = 300;
 constexpr int MIN_BALLS = 100;
-constexpr float M_PI = 3.14159265358979323846f; // ??
+constexpr float M_PI = 3.1415926;
 
 Math::MiddleAverageFilter<float, 100> fpscounter;
+
+// TODO to prevent fast balls from escaping and for more accurate model in general one should consider positions on the next tick instead of current one
 
 template<typename T>
 std::ostream& operator<<(std::ostream& os, const sf::Vector2<T>& v)
@@ -121,17 +123,6 @@ struct Line
     }
 };
 
-inline float dist_to_line(float x1, float y1, float x2, float y2, float x0, float y0)
-{
-    return 
-    std::abs((x2 - x1) * (y1 - y0) - (x1 - x0) * (y2 - y1)) / 
-    std::sqrt((x2 - x1) * (x2 - x1) + (y2 - y1) * (y2 - y1));
-}
-
-float dist_to_line(const sf::Vector2f& a, const sf::Vector2f& b, const sf::Vector2f& p)
-{
-    return dist_to_line(a.x, a.y, b.x, b.y, p.x, p.y);
-}
 
 
 sf::Vector2f project(const Line &l, const sf::Vector2f &p)
@@ -194,17 +185,15 @@ void calc_collision(Ball& b1, Ball& b2)
 
     auto m1 = b1.mass();
     auto m2 = b2.mass();
-
-    //if (dist(b1.p, b2.p + v2 - v1) >= dist(b1.p, b2.p))
-    //{
-    //    return;
-    //}
-
+    
+    // consider movement in a system-related coordinate system 
     auto c = (b1.p + b2.p) / 2.f;
-    auto vc = (v1 + v2) / 2.f;
+    auto vc = (v1 + v2) / 2.f; 
+
     float a1 = std::abs(angle(c - b1.p, v1 - vc));
     float a2 = std::abs(angle(c - b2.p, v2 - vc));
 
+    // skip if balls are (already) not on a collision cource 
     if (std::max(a1, a2) >= M_PI / 2)
     {
         return;
