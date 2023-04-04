@@ -289,6 +289,8 @@ int main()
         Line(bl, tl),
     };
 
+    float max_r = std::max_element(balls.begin(), balls.end(), [](const auto& a, const auto& b) { return a.r < b.r; })->r;
+
     while (window.isOpen())
     {
 
@@ -315,6 +317,9 @@ int main()
         /// Как можно было-бы улучшить текущую архитектуру кода?
         /// Данный код является макетом, вы можете его модифицировать по своему усмотрению
 
+        // n log (n) complexity on average, because candidates are considered only in a limited (max_r * 2) X window to right 
+        std::sort(balls.begin(), balls.end(), [](const auto & a, const auto & b) { return a.p.x < b.p.x; });
+
         {
             for (int i = 0; i < balls.size(); ++i)
             {
@@ -326,8 +331,13 @@ int main()
                     }
                 }
 
-                for (int j = i + 1; j < balls.size(); ++j) // n^2 
+                for (int j = i + 1; j < balls.size(); ++j) 
                 {
+                    if (balls[j].p.x - balls[i].p.x > max_r + balls[i].r)
+                    {
+                        break; // skip balls that are surely out of reach
+                    }
+
                     if (is_touching(balls[j], balls[i]))
                     {
                         calc_collision(balls[j], balls[i]);
