@@ -195,11 +195,21 @@ void calc_collision(Ball& b1, Ball& b2)
     auto m1 = b1.mass();
     auto m2 = b2.mass();
 
-    if (dist(b1.p + b1.dir, b2.p + b2.dir) >= dist(b1.p, b2.p))
+    //if (dist(b1.p, b2.p + v2 - v1) >= dist(b1.p, b2.p))
+    //{
+    //    return;
+    //}
+
+    auto c = (b1.p + b2.p) / 2.f;
+    auto vc = (v1 + v2) / 2.f;
+    float a1 = std::abs(angle(c - b1.p, v1 - vc));
+    float a2 = std::abs(angle(c - b2.p, v2 - vc));
+
+    if (std::max(a1, a2) >= M_PI / 2)
     {
         return;
     }
-
+    
     auto dv1 = (m2 * v2 * 2.f + v1 * (m1 - m2)) / (m1 + m2) - v1;
     sf::Vector2f dv2 = (m1 * v1 * 2.f + v2 * (m2 - m1)) / (m1 + m2) - v2;
 
