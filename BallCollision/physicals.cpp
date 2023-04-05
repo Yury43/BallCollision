@@ -9,13 +9,13 @@ uint32_t Physical::next_id = 0;
 
 //static bool are_touching(const Line& line, const Ball& ball)
 //{
-//    return norm(project(line, ball.p) - ball.p) <= ball.r;
+//    return norm(project(line, ball.p) - ball.p) <= ball.R;
 //}
 
 
 static bool are_touching(const Ball& b1, const Ball& b2)
 {
-    return norm(b1.p - b2.p) <= (b1.r + b2.r);
+    return norm(b1.p - b2.p) <= (b1.R + b2.R);
 }
 
 bool Ball::is_touching(const Physical* other) const
@@ -116,8 +116,8 @@ void Ball::handle_collision(Physical* other)
         auto c = (r1 + r2) / 2.f;
         auto drc1 = r1 - c;
         auto drc2 = r2 - c;
-        auto dr1 = normalized(drc1) * (r - norm(drc1));
-        auto dr2 = normalized(drc2) * (r - norm(drc2));
+        auto dr1 = normalized(drc1) * (R - norm(drc1));
+        auto dr2 = normalized(drc2) * (R - norm(drc2));
 
         if (norm(dv1) > 1e-6)
         {

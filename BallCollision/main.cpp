@@ -24,8 +24,8 @@ Math::MiddleAverageFilter<float, 100> fpscounter;
 sf::CircleShape ball_as_shape(const Ball& ball)
 {
     sf::CircleShape gball;
-    gball.setRadius(ball.r);
-    gball.setPosition(ball.p.x - ball.r, ball.p.y - ball.r); // consider ball.p to be the center
+    gball.setRadius(ball.R);
+    gball.setPosition(ball.p.x - ball.R, ball.p.y - ball.R); // consider ball.p to be the center
     gball.setFillColor(ball.color);
     return gball;
 }
@@ -144,7 +144,7 @@ void phisics_loop()
         balls.push_back(std::make_shared<Ball>());
 
         int r = 5 + rand() % 5;
-        balls.back()->r = r;
+        balls.back()->R = r;
         balls.back()->p.x = (r + rand()) % (WINDOW_X - r); // make sure balls dont spawn on the edges 
         balls.back()->p.y = (r + rand()) % (WINDOW_Y - r);
         balls.back()->dir.x = (-5.f + (rand() % 10)) / 3.;
@@ -178,7 +178,7 @@ void phisics_loop()
 
 
 
-    float max_r = balls.empty() ? 0 : (*std::max_element(balls.begin(), balls.end(), [](const auto& a, const auto& b) { return a->r < b->r; }))->r;
+    float max_r = balls.empty() ? 0 : (*std::max_element(balls.begin(), balls.end(), [](const auto& a, const auto& b) { return a->R < b->R; }))->R;
 
     std::unordered_set<Collision> processed_collisions;
 
@@ -256,7 +256,7 @@ void phisics_loop()
             for (const auto& ball : balls)
             {
                 auto r1 = ball->p;
-                float R = ball->r;
+                float R = ball->R;
 
                 if (r1.x - R < 0)
                 {

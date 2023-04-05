@@ -31,7 +31,7 @@ class Ball : public Physical
 public:
     sf::Vector2f p = { 0, 0 };
     sf::Vector2f dir = { 0, 0 };
-    float r = 0;
+    float R = 0;
     float speed = 0;
     sf::Color color = sf::Color::White;
     std::vector<Reaction> reactions = {};
@@ -45,7 +45,7 @@ public:
 
     float mass() const
     {
-        return r * r * r; // consider mass to be a function of volume just to make interactions a little bit easier to perceive and comprehend
+        return R * R * R; // consider mass to be a function of volume just to make interactions a little bit easier to perceive and comprehend
     }
 
     sf::Vector2f velocity() const
