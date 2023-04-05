@@ -188,6 +188,7 @@ int main()
 
     while (window.isOpen())
     {
+        float poll_start_time = clock.getElapsedTime().asSeconds();
         sf::Event event;
         while (window.pollEvent(event))
         {
@@ -196,10 +197,12 @@ int main()
                 window.close();
             }
         }
+        float poll_end_time = clock.getElapsedTime().asSeconds();
+        float poll_duration = poll_end_time - poll_start_time;
 
 
         float current_time = clock.getElapsedTime().asSeconds();
-        float deltaTime = current_time - lastime;
+        float deltaTime = current_time - lastime - poll_duration;
         fpscounter.push(1.0f / (current_time - lastime));
         lastime = current_time;
 
