@@ -122,15 +122,15 @@ void Ball::handle_collision(Physical* other)
         auto c = (r1 + r2) / 2.f;
         auto drc1 = r1 - c;
         auto drc2 = r2 - c;
-        auto dr1 = normalized(drc1) * (R - norm(drc1));
-        auto dr2 = normalized(drc2) * (R - norm(drc2));
+        auto dr1 = normalized(drc1) * (R - norm(drc1) + 1e-2f);
+        auto dr2 = normalized(drc2) * (R - norm(drc2) + 1e-2f);
 
-        if (norm(dv1) > 1e-6)
+        if (norm(dv1) > 1e-6 || norm(dr1) > 1e-6)
         {
             reactions.push_back({ dv1 * m1, dr1 });
         }
 
-        if (norm(dv2) > 1e-6)
+        if (norm(dv2) > 1e-6 || norm(dr2) > 1e-6)
         {
             other_ball->reactions.push_back({ dv2 * m2, dr2 });
         }

@@ -3,12 +3,17 @@
 #include <SFML/System/Vector2.hpp>
 #include <vector>
 #include "math.h"
+#include <iostream>
 
 class Physical
 {
 public:
     const uint32_t id;
-    Physical() : id(next_id++) {};
+    Physical() : id(next_id++) 
+    { 
+        //std::cout << "created Physical #" << id << std::endl; 
+    };
+
 
     virtual ~Physical(){}
 
@@ -37,6 +42,16 @@ public:
     std::vector<Reaction> reactions = {};
 
     Ball() : Physical() {};
+
+    Ball(const Ball& other) : Physical()
+    {
+        this->p = other.p;
+        this->dir = other.dir;
+        this->R = other.R;
+        this->speed = other.speed;
+        this->color = other.color;
+        this->reactions = other.reactions;
+    }
 
     virtual ~Ball()
     {
@@ -67,6 +82,39 @@ public:
     void mark_colliding(bool is_colliding) override;
     void handle_collision(Physical* other) override;
     void apply_reactions();
+
+    bool test_wall_collision(int left, int top, int right, int bottom)
+    {
+        bool collided = false;
+
+        if (p.x - R < left)
+        {
+            dir.x *= -1;
+            p.x = left + R;
+            collided = true;
+        }
+        else if (p.x + R > right)
+        {
+            dir.x *= -1;
+            p.x = right - R;
+            collided = true;
+        }
+
+        if (p.y - R < top)
+        {
+            dir.y *= -1;
+            p.y = top + R;
+            collided = true;
+        }
+        else if (p.y + R > bottom)
+        {
+            dir.y *= -1;
+            p.y = bottom - R;
+            collided = true;
+        }
+
+        return collided;
+    }
 };
 
 

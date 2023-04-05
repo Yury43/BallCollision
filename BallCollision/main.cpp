@@ -2,11 +2,13 @@
 #include "MiddleAverageFilter.h"
 #include <iostream>
 #include <unordered_set>
+#include <unordered_map>
 #include <functional>
 #include <mutex>
 #include <assert.h>
 #include "math.h"
 #include "physicals.h"
+#include "disjoined_set_union.h"
 
 constexpr int WINDOW_X = 1024;
 constexpr int WINDOW_Y = 768;
@@ -61,8 +63,8 @@ public:
     const uint64_t cid;
 
     Collision(
-        const std::shared_ptr<Physical> & p1, 
-        const std::shared_ptr<Physical> & p2) 
+        const std::shared_ptr<Physical> & p1,
+        const std::shared_ptr<Physical> & p2)
         : party1(p1), party2(p2), cid(make_id(p1, p2))
     {
         
@@ -75,7 +77,7 @@ public:
 
     void handle()
     {
-        party1->handle_collision(party2.get());
+        return party1->handle_collision(party2.get());
     }
 
     void mark_started() const
@@ -94,7 +96,7 @@ private:
     std::shared_ptr<Physical> party1;
     std::shared_ptr<Physical> party2;
 
-    uint64_t make_id(const std::shared_ptr<Physical> & p1, const std::shared_ptr<Physical> & p2)
+    static uint64_t make_id(const std::shared_ptr<Physical> & p1, const std::shared_ptr<Physical> & p2)
     {
         int high = p1->id;
         int low = p2->id;
@@ -150,60 +152,89 @@ void init_random(std::vector<std::shared_ptr<Ball>> & balls)
 
 void init_corner_bounce(std::vector<std::shared_ptr<Ball>>& balls)
 {
-    balls.push_back(std::make_shared<Ball>());
-    balls.back()->R = 20;
-    balls.back()->p.x = 100;
-    balls.back()->p.y = 100;
-    balls.back()->dir.x = -1;
-    balls.back()->dir.y = -1;
-    balls.back()->speed = 500;
+    Ball ball;
 
-    balls.push_back(std::make_shared<Ball>());
-    balls.back()->R = 20;
-    balls.back()->p.x = 300;
-    balls.back()->p.y = 300;
-    balls.back()->dir.x = 1;
-    balls.back()->dir.y = 1;
-    balls.back()->speed = 500;
+    ball.R = 20;
+    ball.p.x = 100;
+    ball.p.y = 100;
+    ball.dir.x = -1;
+    ball.dir.y = -1;
+    ball.speed = 500;
+
+    balls.push_back(std::make_shared<Ball>(ball));
+
+    ball.p.x = 300;
+    ball.p.y = 300;
+    ball.dir.x = 1;
+    ball.dir.y = 1;
+
+    balls.push_back(std::make_shared<Ball>(ball));
 }
 
 void init_chain(std::vector<std::shared_ptr<Ball>>& balls)
 {
     float R = 20;
 
-    balls.push_back(std::make_shared<Ball>());
-    balls.back()->R = R;
-    balls.back()->p.x = 100;
-    balls.back()->p.y = 100;
-    balls.back()->dir.x = -1;
-    balls.back()->dir.y = 0;
-    balls.back()->speed = 500;
+    Ball ball;
 
-    balls.push_back(std::make_shared<Ball>());
-    balls.back()->R = R;
-    balls.back()->p.x = 100 + 2 * R + 1;
-    balls.back()->p.y = 100;
-    balls.back()->dir.x = 0;
-    balls.back()->dir.y = 0;
-    balls.back()->speed = 0;
+    ball.R = R;
+    ball.p.x = 100;
+    ball.p.y = 100;
+    ball.dir.x = -1;
+    ball.dir.y = 0;
+    ball.speed = 500;
+    balls.push_back(std::make_shared<Ball>(ball));
 
-    balls.push_back(std::make_shared<Ball>());
-    balls.back()->R = R;
-    balls.back()->p.x = 100 + 4 * R + 2;
-    balls.back()->p.y = 100;
-    balls.back()->dir.x = 0;
-    balls.back()->dir.y = 0;
-    balls.back()->speed = 0;
+    ball.p.x += 2 * R;
+    ball.dir.x = 0;
+    ball.speed = 0;
+    balls.push_back(std::make_shared<Ball>(ball));
 
-    balls.push_back(std::make_shared<Ball>());
-    balls.back()->R = R;
-    balls.back()->p.x = 100 + 6 * R + 3;
-    balls.back()->p.y = 100;
-    balls.back()->dir.x = 0;
-    balls.back()->dir.y = 0;
-    balls.back()->speed = 0;
+    ball.p.x += 2 * R;
+    balls.push_back(std::make_shared<Ball>(ball));
+
+    ball.p.x += 2 * R;
+    balls.push_back(std::make_shared<Ball>(ball));
 }
 
+void init_billiards(std::vector<std::shared_ptr<Ball>>& balls)
+{
+    float R = 20;
+
+    Ball ball;
+
+    ball.R = R;
+    ball.p.x = WINDOW_X - R - 1;
+    ball.p.y = WINDOW_Y / 2;
+    ball.dir.x = -1;
+    ball.dir.y = 0;
+    ball.speed = 250;
+    balls.push_back(std::make_shared<Ball>(ball));
+
+    ball.p.x = WINDOW_X / 2;
+    ball.p.y = WINDOW_Y / 2;
+    ball.dir.x = 0;
+    ball.speed = 0;
+    balls.push_back(std::make_shared<Ball>(ball));
+
+    ball.p.x -= R * 2 * std::cos(M_PI / 6);
+    ball.p.y += R;
+    balls.push_back(std::make_shared<Ball>(ball));
+
+    ball.p.y -= R * 2;
+    balls.push_back(std::make_shared<Ball>(ball));
+
+    ball.p.x -= R * 2 * std::cos(M_PI / 6);
+    ball.p.y -= R;
+    balls.push_back(std::make_shared<Ball>(ball));
+
+    ball.p.y += R * 2;
+    balls.push_back(std::make_shared<Ball>(ball));
+
+    ball.p.y += R * 2;
+    balls.push_back(std::make_shared<Ball>(ball));
+
+}
 
 void phisics_loop()
 {
@@ -214,15 +245,20 @@ void phisics_loop()
     init_random(balls);
     //init_corner_bounce(balls);
     //init_chain(balls);
+    //init_billiards(balls);
 
-
+    std::unordered_map<int, std::shared_ptr<Ball>> balls_by_id;
+    for (const auto& ball : balls)
+    {
+        balls_by_id[ball->id] = ball;
+    }
 
     sf::Clock clock;
     float lastime = clock.restart().asSeconds();
 
 
-
     float max_r = balls.empty() ? 0 : (*std::max_element(balls.begin(), balls.end(), [](const auto& a, const auto& b) { return a->R < b->R; }))->R;
+    
 
     std::unordered_set<Collision> processed_collisions;
 
@@ -302,40 +338,20 @@ void phisics_loop()
                 }
             }
 
-            std::vector<Collision> new_collisions;
+            std::vector<std::pair<int, int>> colliding_pairs;
 
-            // Collide with walls 
             for (const auto& ball : balls)
             {
-                auto r1 = ball->p;
-                float R = ball->R;
+                // Test and handle collision with walls 
+                // Wall collisions have higher priority 
+                if (ball->test_wall_collision(0, 0, WINDOW_X, WINDOW_Y))
+                {
+                    continue;
+                }
+     
+ 
+                // Test collision with other balls in bins 
 
-                if (r1.x - R < 0)
-                {
-                    ball->dir.x *= -1;
-                    ball->p.x = 0 + R;
-                }
-                else if (r1.x + R > WINDOW_X)
-                {
-                    ball->dir.x *= -1;
-                    ball->p.x = WINDOW_X - R;
-                }
-
-                if (r1.y - R < 0)
-                {
-                    ball->dir.y *= -1;
-                    ball->p.y = 0 + R;
-                }
-                else if (r1.y + R > WINDOW_Y)
-                {
-                    ball->dir.y *= -1;
-                    ball->p.y = WINDOW_Y - R;
-                }
-            }
-
-            // Collide with balls 
-            for (auto& ball : balls)
-            {
                 size_t bin_x = find_bin_x(*ball);
                 size_t bin_y = find_bin_y(*ball);
 
@@ -343,18 +359,69 @@ void phisics_loop()
                 {
                     for (int j = 0; j < 2; ++j)
                     {
-                        if (out_of_range(bin_x + i, bin_y + j)) continue;
+                        if (out_of_range(bin_x + i, bin_y + j)) 
+                            continue;
 
                         for (auto& other_ball : bins[bin_x + i][bin_y + j])
                         {
-                            if (ball->id == other_ball->id) continue;
-                            if (!ball->is_touching(other_ball.get())) continue;
+                            if (ball->id == other_ball->id) 
+                                continue;
 
-                            new_collisions.push_back(Collision(ball, other_ball));
+                            if (!ball->is_touching(other_ball.get())) 
+                                continue;
+
+
+                            colliding_pairs.push_back({ball->id, other_ball->id });
                         }
                     }
                 }
             }
+
+            // Find collisions involving same balls 
+
+            DisjoinedSetUnion colliding_sets(colliding_pairs.size());
+
+            for (int i = 0; i < colliding_pairs.size(); ++i)
+            {
+                for (int j = i + 1; j < colliding_pairs.size(); ++j)
+                {
+                    if (colliding_pairs[i].first == colliding_pairs[j].first ||
+                        colliding_pairs[i].first == colliding_pairs[j].second ||
+                        colliding_pairs[i].second == colliding_pairs[j].first ||
+                        colliding_pairs[i].second == colliding_pairs[j].second)
+                    {
+                        colliding_sets.Join(i, j);
+                    }
+                }
+            }
+
+            // If collision involves more than 2 balls, chose single pair randomly, leave others for later 
+
+            std::vector<Collision> new_collisions;
+            
+            for (const std::pair<int, std::vector<int>> & collision_set : colliding_sets.SetsByParent())
+            {
+                int selected_pair_id;
+                if (collision_set.second.size() == 1)
+                {
+                    selected_pair_id = collision_set.second.front();
+                }
+                else
+                {
+                    //std::cout << "collision of " << collision_set.second.size() << " pairs" << std::endl;
+
+                    selected_pair_id = collision_set.second[rand() % collision_set.second.size()];
+                }
+
+                std::pair<int, int> selected_pair = colliding_pairs[selected_pair_id];
+
+                new_collisions.push_back(Collision(
+                    balls_by_id[selected_pair.first], 
+                    balls_by_id[selected_pair.second]
+                ));
+            }
+
+            //std::cout << "total collisions: " << colliding_pairs.size() << " selected new collisions: " << new_collisions.size() << std::endl;
 
             // Process new collisions and mark them accordingly 
             for (Collision& collision : new_collisions)
