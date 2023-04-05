@@ -9,6 +9,7 @@
 
 constexpr int WINDOW_X = 1024;
 constexpr int WINDOW_Y = 768;
+//constexpr int WINDOW_Y = 1024;
 constexpr int MAX_BALLS = 300;
 constexpr int MIN_BALLS = 100;
 constexpr float M_PI = 3.1415926;
@@ -17,12 +18,7 @@ Math::MiddleAverageFilter<float, 100> fpscounter;
 
 // TODO to prevent fast balls from escaping and for more accurate model in general one should consider positions on the next tick instead of current one
 
-template<typename T>
-std::ostream& operator<<(std::ostream& os, const sf::Vector2<T>& v)
-{
-    os << "( " << v.x << " , " << v.y << " ) ";
-    return os;
-}
+
 
 
 void draw_ball(sf::RenderWindow& window, const Ball& ball)
@@ -140,11 +136,32 @@ int main()
         balls.back()->r = r;
         balls.back()->p.x = (r + rand()) % (WINDOW_X - r); // make sure balls dont spawn on the edges 
         balls.back()->p.y = (r + rand()) % (WINDOW_Y - r);
-        balls.back()->dir.x = (-5 + (rand() % 10)) / 3.;
-        balls.back()->dir.y = (-5 + (rand() % 10)) / 3.;
-        balls.back()->speed = (30 + rand() % 30) * 1;
+        balls.back()->dir.x = (-5.f + (rand() % 10)) / 3.;
+        balls.back()->dir.y = (-5.f + (rand() % 10)) / 3.;
+        balls.back()->speed = (30.f + rand() % 30) * 1;
     }
      
+    //balls.clear();
+    //{
+    //    balls.push_back(std::make_shared<Ball>());
+
+    //    //int r = 5 + rand() % 5;
+    //    balls.back()->r = 20;
+    //    balls.back()->p.x = 100;
+    //    balls.back()->p.y = 100;
+    //    balls.back()->dir.x = -1;
+    //    balls.back()->dir.y = -1;
+    //    balls.back()->speed = 500;
+
+    //    balls.push_back(std::make_shared<Ball>());
+    //    balls.back()->r = 20;
+    //    balls.back()->p.x = 300;
+    //    balls.back()->p.y = 300;
+    //    balls.back()->dir.x = 1;
+    //    balls.back()->dir.y = 1;
+    //    balls.back()->speed = 500;
+    //}
+
     window.setFramerateLimit(60);
 
     sf::Clock clock;
@@ -167,6 +184,8 @@ int main()
 
     std::unordered_set<Collision> processed_collisions;
 
+    float total_energy_prev = -1;
+
     while (window.isOpen())
     {
         sf::Event event;
@@ -177,6 +196,7 @@ int main()
                 window.close();
             }
         }
+
 
         float current_time = clock.getElapsedTime().asSeconds();
         float deltaTime = current_time - lastime;
@@ -191,6 +211,7 @@ int main()
         /// Массы пропорцианальны площадям кругов, описывающих объекты 
         /// Как можно было-бы улучшить текущую архитектуру кода?
         /// Данный код является макетом, вы можете его модифицировать по своему усмотрению
+
 
 
         // Reduce time complexity by placing balls in a grid of bins, only balls in the same bin and its neighbors may interact
@@ -301,6 +322,17 @@ int main()
             {
                 ball->apply_reactions();
             }
+
+            float total_energy = std::accumulate(balls.begin(), balls.end(), 0., [](float sum, const auto& ball) {return sum + ball->Energy(); });
+            if (total_energy_prev > 0)
+            {
+                float dE = total_energy - total_energy_prev;
+                if (dE > 1e-3)
+                {
+                    //std::cout << "dE " << dE << std::endl;
+                }
+            }
+            total_energy_prev = total_energy;
         }
 
         for (auto& ball : balls)
@@ -316,7 +348,8 @@ int main()
         }
 
 
-        //draw_fps(window, fpscounter.getAverage());
+        draw_fps(window, fpscounter.getAverage());
+        //std::cout << " fps " << fpscounter.getAverage() << std::endl;
         window.display();
     }
     return 0;

@@ -20,6 +20,11 @@ private:
     static uint32_t next_id;
 };
 
+struct Reaction
+{
+    sf::Vector2f impulse_delta = { 0, 0 };
+    sf::Vector2f position_delta = { 0, 0 };
+};
 
 class Ball : public Physical
 {
@@ -29,7 +34,7 @@ public:
     float r = 0;
     float speed = 0;
     sf::Color color = sf::Color::White;
-    std::vector<sf::Vector2f> reactions = {};
+    std::vector<Reaction> reactions = {};
 
     Ball() : Physical() {};
 
@@ -51,6 +56,11 @@ public:
     sf::Vector2f impulse() const
     {
         return velocity() * mass();
+    }
+
+    double Energy()
+    {
+        return std::pow(1. * norm(velocity()), 2) * mass() / 2;
     }
 
     bool is_touching(const Physical* other) const override;

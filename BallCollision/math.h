@@ -42,3 +42,10 @@ sf::Vector2<T> average(const std::vector<sf::Vector2<T>>& items)
 {
     return std::accumulate(items.begin(), items.end(), sf::Vector2<T>(0, 0)) / static_cast<T>(items.size());
 }
+
+template<typename T>
+std::ostream& operator<<(std::ostream& os, const sf::Vector2<T>& v)
+{
+    os << "( " << v.x << " , " << v.y << " ) ";
+    return os;
+}
