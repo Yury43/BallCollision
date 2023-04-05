@@ -27,7 +27,7 @@ private:
 
 struct Reaction
 {
-    sf::Vector2f impulse_delta = { 0, 0 };
+    sf::Vector2f velocity_delta = { 0, 0 };
     sf::Vector2f position_delta = { 0, 0 };
 };
 

@@ -1,6 +1,7 @@
 #include "physicals.h"
 #include <algorithm>
 #include <iostream>
+#include <assert.h>
 #include "math.h"
 
 uint32_t Physical::next_id = 0;
@@ -47,17 +48,22 @@ void Ball::apply_reactions()
 
     auto p0 = impulse();
 
-    sf::Vector2f dp = sf::Vector2f(0, 0);
-    sf::Vector2f dr = sf::Vector2f(0, 0);
+    sf::Vector2f v2 = sf::Vector2f(0, 0);
+    sf::Vector2f r2 = sf::Vector2f(0, 0);
 
     if (reactions.size() > 1)
     {
         std::cout << "reactions: " << reactions.size() << std::endl;
     }
 
-    std::for_each(reactions.begin(), reactions.end(), [&dp](const Reaction& item) {dp += item.impulse_delta; });
+    assert(reactions.size() == 1);
+
+    v2 = reactions.front().velocity_delta;
+    r2 = reactions.front().position_delta;
+
+    //std::for_each(reactions.begin(), reactions.end(), [&dp](const Reaction& item) {dp += item.impulse_delta; });
     //dp /= static_cast<float>(reactions.size()); // this doesn make sence, the resulting impulse cound be averaged, but delta should be summed 
-    std::for_each(reactions.begin(), reactions.end(), [&dr](const Reaction& item) {dr += item.position_delta; });
+    //std::for_each(reactions.begin(), reactions.end(), [&dr](const Reaction& item) {dr += item.position_delta; });
     //dr /= static_cast<float>(reactions.size()); // this doesn make sence, the resulting position cound be averaged, but delta should be summed 
 
     //std::cout << "dp: " << dp << " ; dr: " << dr << std::endl;
@@ -65,14 +71,9 @@ void Ball::apply_reactions()
 
     reactions.clear();
 
-    auto p2 = p0 + dp;
-
-    auto adp = std::abs(norm(p0) - norm(p2));
-
-    auto v = p2 / mass();
-    speed = norm(v);
-    dir = normalized(v);
-    p = p + dr;
+    p = r2;
+    speed = norm(v2);
+    dir = normalized(v2);
 }
 
 void Ball::handle_collision(Physical* other)
@@ -105,34 +106,51 @@ void Ball::handle_collision(Physical* other)
     auto other_ball = dynamic_cast<Ball*>(other);
     if (other_ball != nullptr)
     {
-        //std::cout << "ball" << std::endl;
-        // calculate impulse deltas 
+        float m1 = mass();
+        float m2 = other_ball->mass();
+
+        auto r1 = p;
+        auto r2 = other_ball->p;
+
         auto v1 = velocity();
         auto v2 = other_ball->velocity();
 
-        auto m1 = mass();
-        auto m2 = other_ball->mass();
-
-        auto dv1 = (m2 * v2 * 2.f + v1 * (m1 - m2)) / (m1 + m2) - v1;
-        auto dv2 = (m1 * v1 * 2.f + v2 * (m2 - m1)) / (m1 + m2) - v2;
-
         // correct positions 
-        const auto& r1 = p;
-        const auto& r2 = other_ball->p;
+
         auto c = (r1 + r2) / 2.f;
         auto drc1 = r1 - c;
         auto drc2 = r2 - c;
         auto dr1 = normalized(drc1) * (R - norm(drc1) + 1e-2f);
         auto dr2 = normalized(drc2) * (R - norm(drc2) + 1e-2f);
 
-        if (norm(dv1) > 1e-6 || norm(dr1) > 1e-6)
+        r1 = r1 + dr1;
+        r2 = r2 + dr2;
+
+        // calculate velocity deltas 
+
+        auto t = normalized(r2 - r1);
+        auto n = sf::Vector2f(t.y, t.x);
+        
+        float v1t = dot(v1, t);
+        float v2t = dot(v2, t);
+
+        float v1n = norm(v1 - v1t * t);
+        float v2n = norm(v2 - v2t * t);
+
+        float v1t2 = (m2 * v2t * 2.f + v1t * (m1 - m2)) / (m1 + m2);
+        float v2t2 = (m1 * v1t * 2.f + v2t * (m2 - m1)) / (m1 + m2);
+
+        auto v12 = t * v1t2 + n * v1n;
+        auto v22 = t * v2t2 + n * v2n;
+
+        if (norm(v12) > 1e-6 || norm(dr1) > 1e-6)
         {
-            reactions.push_back({ dv1 * m1, dr1 });
+            reactions.push_back({ v12, r1 });
         }
 
-        if (norm(dv2) > 1e-6 || norm(dr2) > 1e-6)
+        if (norm(v22) > 1e-6 || norm(dr2) > 1e-6)
         {
-            other_ball->reactions.push_back({ dv2 * m2, dr2 });
+            other_ball->reactions.push_back({ v22, r2 });
         }
 
         return;

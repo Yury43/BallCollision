@@ -242,6 +242,51 @@ void init_snooker(std::vector<std::shared_ptr<Ball>>& balls)
 
 }
 
+void init_angled(std::vector<std::shared_ptr<Ball>>& balls)
+{
+    float R = 20;
+
+    Ball ball;
+
+    ball.R = R;
+    ball.p.x = WINDOW_X - R - 1;
+    ball.p.y = WINDOW_Y / 2;
+    ball.dir.x = -1;
+    ball.dir.y = 0;
+    ball.speed = 250;
+    balls.push_back(std::make_shared<Ball>(ball));
+
+
+    ball.p.x = WINDOW_X / 2;
+    ball.p.y = WINDOW_Y / 2;
+    ball.dir.x = 0;
+    ball.speed = 0;
+    //balls.push_back(std::make_shared<Ball>(ball));
+
+    ball.p.x -= R * 2 * std::cos(M_PI / 6);
+    ball.p.y += R;
+    balls.push_back(std::make_shared<Ball>(ball));
+
+    //ball.p.y -= R * 2;
+    //balls.push_back(std::make_shared<Ball>(ball));
+
+    //ball.p.x -= R * 2 * std::cos(M_PI / 6);
+    //ball.p.y -= R;
+    //balls.push_back(std::make_shared<Ball>(ball));
+
+    //ball.p.y += R * 2;
+    //balls.push_back(std::make_shared<Ball>(ball));
+
+    //ball.p.y += R * 2;
+    //balls.push_back(std::make_shared<Ball>(ball));
+
+    //for (auto& ball : balls)
+    //{
+    //    ball->R += 0.001 * (4 - rand() % 5);
+    //}
+
+}
+
 void phisics_loop()
 {
     srand(time(NULL));
@@ -251,7 +296,8 @@ void phisics_loop()
     //init_random(balls);
     //init_corner_bounce(balls);
     //init_chain(balls);
-    init_snooker(balls);
+    //init_snooker(balls);
+    init_angled(balls);
 
     std::unordered_map<int, std::shared_ptr<Ball>> balls_by_id;
     for (const auto& ball : balls)
@@ -272,7 +318,7 @@ void phisics_loop()
 
     std::cout << "phisics_loop running" << std::endl;
 
-    float speed_up = 2;
+    float speed_up = 1;
 
     // calculate target iteration delay and next iteration time
     const auto iteration_delay = std::chrono::milliseconds(1000) / target_framerate / speed_up;
@@ -286,11 +332,11 @@ void phisics_loop()
         fpscounter.push(1.0f / (current_time - lastime));
         lastime = current_time;
 
-        // Update positions before searching for collisions to account for current positions 
-        for (auto& ball : balls)
-        {
-            move_ball(*ball, deltaTime);
-        }
+        //// Update positions before searching for collisions to account for current positions 
+        //for (auto& ball : balls)
+        //{
+        //    move_ball(*ball, deltaTime);
+        //}
 
         // Reduce time complexity by placing balls in a grid of bins, only balls in the same bin and its neighbors may interact
 
@@ -464,6 +510,11 @@ void phisics_loop()
             total_energy_prev = total_energy;
         }
 
+        // Update positions after handling collisions render collisions of next iteration 
+        for (auto& ball : balls)
+        {
+            move_ball(*ball, deltaTime);
+        }
 
         // Place shapes to draw in drawing buffer 
         {
