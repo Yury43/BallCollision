@@ -3,6 +3,7 @@
 #include <iostream>
 #include <unordered_set>
 #include <functional>
+#include <mutex>
 #include <assert.h>
 #include "math.h"
 #include "Physicals.h"
@@ -13,20 +14,25 @@ constexpr int WINDOW_Y = 768;
 constexpr int MAX_BALLS = 300;
 constexpr int MIN_BALLS = 100;
 constexpr float M_PI = 3.1415926;
+constexpr int target_framerate = 60;
 
 Math::MiddleAverageFilter<float, 100> fpscounter;
 
 // TODO to prevent fast balls from escaping and for more accurate model in general one should consider positions on the next tick instead of current one
 
 
-
-
-void draw_ball(sf::RenderWindow& window, const Ball& ball)
+sf::CircleShape ball_as_shape(const Ball& ball)
 {
     sf::CircleShape gball;
     gball.setRadius(ball.r);
     gball.setPosition(ball.p.x - ball.r, ball.p.y - ball.r); // consider ball.p to be the center
     gball.setFillColor(ball.color);
+    return gball;
+}
+
+void draw_ball(sf::RenderWindow& window, const Ball& ball)
+{
+    sf::CircleShape gball = ball_as_shape(ball);
     window.draw(gball);
 }
 
@@ -119,16 +125,21 @@ bool operator == (const Collision & left, const Collision& right)
     return left.cid == right.cid;
 }
 
-int main()
+
+std::atomic_bool stop_flag = false;
+std::vector<sf::CircleShape> render_buffer;
+std::mutex render_buffer_mutex;
+
+
+void phisics_loop()
 {
-    sf::RenderWindow window(sf::VideoMode(WINDOW_X, WINDOW_Y), "ball collision demo");
     srand(time(NULL));
 
     std::vector<std::shared_ptr<Ball>> balls;
 
     // randomly initialize balls
     for (int i = 0; i < (rand() % (MAX_BALLS - MIN_BALLS) + MIN_BALLS); i++)
-    //for (int i = 0; i < 1; i++)
+        //for (int i = 0; i < 1; i++)
     {
         balls.push_back(std::make_shared<Ball>());
 
@@ -140,7 +151,7 @@ int main()
         balls.back()->dir.y = (-5.f + (rand() % 10)) / 3.;
         balls.back()->speed = (30.f + rand() % 30) * 1;
     }
-     
+
     //balls.clear();
     //{
     //    balls.push_back(std::make_shared<Ball>());
@@ -161,7 +172,6 @@ int main()
     //    balls.back()->speed = 500;
     //}
 
-    window.setFramerateLimit(60);
 
     sf::Clock clock;
     float lastime = clock.restart().asSeconds();
@@ -185,36 +195,18 @@ int main()
 
     float total_energy_prev = -1;
 
-    while (window.isOpen())
+    std::cout << "phisics_loop running" << std::endl;
+
+    const auto iteration_delay = std::chrono::milliseconds(1000) / target_framerate;
+    std::cout << iteration_delay.count() << std::endl;
+    auto next_iteration_time = std::chrono::system_clock::now() + iteration_delay;
+
+    while (not stop_flag)
     {
-        float poll_start_time = clock.getElapsedTime().asSeconds();
-        sf::Event event;
-        while (window.pollEvent(event))
-        {
-            if (event.type == sf::Event::Closed)
-            {
-                window.close();
-            }
-        }
-        float poll_end_time = clock.getElapsedTime().asSeconds();
-        float poll_duration = poll_end_time - poll_start_time;
-
-
         float current_time = clock.getElapsedTime().asSeconds();
-        float deltaTime = current_time - lastime - poll_duration;
+        float deltaTime = current_time - lastime;
         fpscounter.push(1.0f / (current_time - lastime));
         lastime = current_time;
-
-        /// <summary>
-        /// TODO: PLACE COLLISION CODE HERE 
-        /// объекты создаются в случайном месте на плоскости со случайным вектором скорости, имеют радиус R
-        /// Объекты движутся кинетически. Пространство ограниченно границами окна
-        /// Напишите обработчик столкновений шаров между собой и краями окна. Как это сделать эффективно?
-        /// Массы пропорцианальны площадям кругов, описывающих объекты 
-        /// Как можно было-бы улучшить текущую архитектуру кода?
-        /// Данный код является макетом, вы можете его модифицировать по своему усмотрению
-
-
 
         // Reduce time complexity by placing balls in a grid of bins, only balls in the same bin and its neighbors may interact
 
@@ -228,7 +220,7 @@ int main()
         auto find_bin_x = [bin_size, n_bins_x](const Ball& b) {return static_cast<int>(std::round(b.p.x / bin_size)) + 1; };
         auto find_bin_y = [bin_size, n_bins_y](const Ball& b) {return static_cast<int>(std::round(b.p.y / bin_size)) + 1; };
         auto out_of_range = [n_bins_x, n_bins_y](int bin_x, int bin_y) {return bin_x < 0 or bin_x >= n_bins_x or bin_y < 0 or bin_y >= n_bins_y; };
-        
+
         // place balls in bins, delete those that escaped 
         {
             auto ball_it = balls.begin();
@@ -326,9 +318,9 @@ int main()
             }
 
             float total_energy = std::accumulate(balls.begin(), balls.end(), 0., [](float sum, const auto& ball) {
-                return sum + ball->Energy(); 
+                return sum + ball->Energy();
                 //return sum + norm(ball->velocity()); 
-            });
+                });
 
             if (total_energy_prev > 0)
             {
@@ -346,17 +338,81 @@ int main()
             move_ball(*ball, deltaTime);
         }
 
-        window.clear();
-
-        for (const auto & ball : balls)
+        std::vector<sf::CircleShape> gballs;
+        gballs.reserve(balls.size());
+        for (const auto& ball: balls)
         {
-            draw_ball(window, *ball);
+            gballs.push_back(ball_as_shape(*ball));
         }
 
+        {
+            std::lock_guard<std::mutex> lock(render_buffer_mutex);
+            render_buffer = std::move(gballs);
+        }
+
+        
+        std::this_thread::sleep_until(next_iteration_time);
+        next_iteration_time = next_iteration_time + iteration_delay;
+
+    }
+
+    std::cout << "phisics_loop done" << std::endl;
+}
+
+
+
+int main()
+{
+    sf::RenderWindow window(sf::VideoMode(WINDOW_X, WINDOW_Y), "ball collision demo");
+    window.setFramerateLimit(target_framerate);
+
+
+    std::thread physics_thread(phisics_loop);
+
+    while (window.isOpen())
+    {
+        sf::Event event;
+        while (window.pollEvent(event))
+        {
+            if (event.type == sf::Event::Closed)
+            {
+                window.close();
+            }
+        }
+
+        /// <summary>
+        /// TODO: PLACE COLLISION CODE HERE 
+        /// объекты создаются в случайном месте на плоскости со случайным вектором скорости, имеют радиус R
+        /// Объекты движутся кинетически. Пространство ограниченно границами окна
+        /// Напишите обработчик столкновений шаров между собой и краями окна. Как это сделать эффективно?
+        /// Массы пропорцианальны площадям кругов, описывающих объекты 
+        /// Как можно было-бы улучшить текущую архитектуру кода?
+        /// Данный код является макетом, вы можете его модифицировать по своему усмотрению
+
+
+        // get data to render from phisics thread;
+        std::vector<sf::CircleShape> gballs;
+        {
+            std::lock_guard<std::mutex> lock(render_buffer_mutex);
+            gballs = std::move(render_buffer);
+        }
+
+        if (!gballs.empty())
+        {
+            window.clear();
+            for (const auto& gball : gballs)
+            {
+                window.draw(gball);
+            }
+        }
 
         draw_fps(window, fpscounter.getAverage());
         //std::cout << " fps " << fpscounter.getAverage() << std::endl;
         window.display();
     }
+
+    stop_flag = true;
+    physics_thread.join();
+
     return 0;
 }
