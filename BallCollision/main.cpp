@@ -176,18 +176,7 @@ void phisics_loop()
     sf::Clock clock;
     float lastime = clock.restart().asSeconds();
 
-    sf::Vector2f tl(0, 0);
-    sf::Vector2f tr(WINDOW_X, 0);
-    sf::Vector2f br(WINDOW_X, WINDOW_Y);
-    sf::Vector2f bl(0, WINDOW_Y);
 
-    std::vector<std::shared_ptr<Line>> walls =
-    {
-         std::make_shared<Line>(tl, tr),
-         std::make_shared<Line>(tr, br),
-         std::make_shared<Line>(br, bl),
-         std::make_shared<Line>(bl, tl),
-    };
 
     float max_r = balls.empty() ? 0 : (*std::max_element(balls.begin(), balls.end(), [](const auto& a, const auto& b) { return a->r < b->r; }))->r;
 
@@ -262,14 +251,32 @@ void phisics_loop()
 
             std::vector<Collision> new_collisions;
 
+            // collide with walls 
             for (const auto& ball : balls)
             {
-                for (const auto& wall : walls)
+                auto r1 = ball->p;
+                float R = ball->r;
+
+                if (r1.x - R < 0)
                 {
-                    if (ball->is_touching(wall.get()))
-                    {
-                        new_collisions.push_back(Collision(ball, wall));
-                    }
+                    ball->dir.x *= -1;
+                    ball->p.x = 0 + R;
+                }
+                else if (r1.x + R > WINDOW_X)
+                {
+                    ball->dir.x *= -1;
+                    ball->p.x = WINDOW_X - R;
+                }
+
+                if (r1.y - R < 0)
+                {
+                    ball->dir.y *= -1;
+                    ball->p.y = 0 + R;
+                }
+                else if (r1.y + R > WINDOW_Y)
+                {
+                    ball->dir.y *= -1;
+                    ball->p.y = WINDOW_Y - R;
                 }
             }
 

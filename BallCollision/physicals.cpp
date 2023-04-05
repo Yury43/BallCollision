@@ -7,10 +7,10 @@ uint32_t Physical::next_id = 0;
 
 
 
-static bool are_touching(const Line& line, const Ball& ball)
-{
-    return norm(project(line, ball.p) - ball.p) <= ball.r;
-}
+//static bool are_touching(const Line& line, const Ball& ball)
+//{
+//    return norm(project(line, ball.p) - ball.p) <= ball.r;
+//}
 
 
 static bool are_touching(const Ball& b1, const Ball& b2)
@@ -20,11 +20,11 @@ static bool are_touching(const Ball& b1, const Ball& b2)
 
 bool Ball::is_touching(const Physical* other) const
 {
-    const Line* other_as_line = dynamic_cast<const Line*>(other);
-    if (other_as_line != nullptr)
-    {
-        return are_touching(*other_as_line, *this);
-    }
+    //const Line* other_as_line = dynamic_cast<const Line*>(other);
+    //if (other_as_line != nullptr)
+    //{
+    //    return are_touching(*other_as_line, *this);
+    //}
     const Ball* other_as_ball = dynamic_cast<const Ball*>(other);
     if (other_as_ball != nullptr)
     {
@@ -48,10 +48,10 @@ void Ball::apply_reactions()
     auto p0 = impulse();
 
     sf::Vector2f dp = sf::Vector2f(0, 0);
+    sf::Vector2f dr = sf::Vector2f(0, 0);
+
     std::for_each(reactions.begin(), reactions.end(), [&dp](const Reaction& item) {dp += item.impulse_delta; });
     //dp /= static_cast<float>(reactions.size()); // this doesn make sence, the resulting impulse cound be averaged, but delta should be summed 
-
-    sf::Vector2f dr = sf::Vector2f(0, 0);
     std::for_each(reactions.begin(), reactions.end(), [&dr](const Reaction& item) {dr += item.position_delta; });
     //dr /= static_cast<float>(reactions.size()); // this doesn make sence, the resulting position cound be averaged, but delta should be summed 
 
@@ -71,30 +71,30 @@ void Ball::apply_reactions()
 
 void Ball::handle_collision(Physical* other)
 {
-    auto other_line = dynamic_cast<Line*>(other);
-    if (other_line != nullptr)
-    {
-        //std::cout << "wall" << std::endl;
-        // calculate impulse delta 
-        auto contact_point = project(*other_line, p);
-        auto ball_to_wall = contact_point - p;
+    //auto other_line = dynamic_cast<Line*>(other);
+    //if (other_line != nullptr)
+    //{
+    //    //std::cout << "wall" << std::endl;
+    //    // calculate impulse delta 
+    //    auto contact_point = project(*other_line, p);
+    //    auto ball_to_wall = contact_point - p;
 
-        sf::Vector2f p0 = impulse();
-        sf::Vector2f pn = project(p0, ball_to_wall);
+    //    sf::Vector2f p0 = impulse();
+    //    sf::Vector2f pn = project(p0, ball_to_wall);
 
-        auto dp = -2.f * pn;
+    //    auto dp = -2.f * pn;
 
-        // correct position, placing ball on the point of contact 
-        auto dr = -normalized(ball_to_wall) * (r - norm(ball_to_wall));
+    //    // correct position, placing ball on the point of contact 
+    //    auto dr = -normalized(ball_to_wall) * (R - norm(ball_to_wall));
 
-        if (norm(dp) > 1e-6)
-        {
-            //std::cout << "dp: " << dp << " ; dr: " << dr << std::endl;
-            reactions.push_back({ dp, dr });
-        }
+    //    if (norm(dp) > 1e-6)
+    //    {
+    //        //std::cout << "dp: " << dp << " ; dr: " << dr << std::endl;
+    //        reactions.push_back({ dp, dr });
+    //    }
 
-        return;
-    }
+    //    return;
+    //}
 
     auto other_ball = dynamic_cast<Ball*>(other);
     if (other_ball != nullptr)
@@ -136,31 +136,31 @@ void Ball::handle_collision(Physical* other)
 }
 
 
-bool Line::is_touching(const Physical* other) const
-{
-    const Ball* other_as_ball = dynamic_cast<const Ball*>(other);
-    if (other_as_ball != nullptr)
-    {
-        return are_touching(*this, *other_as_ball);
-    }
-    throw std::logic_error("Not implemented");
-}
-
-
-void Line::handle_collision(Physical* other)
-{
-    auto other_line = dynamic_cast<Line*>(other);
-    if (other_line != nullptr)
-    {
-        return;
-    }
-
-    auto other_ball = dynamic_cast<Ball*>(other);
-    if (other_ball != nullptr)
-    {
-        other_ball->handle_collision(this);
-        return;
-    }
-
-    throw std::logic_error("Not implemented");
-}
+//bool Line::is_touching(const Physical* other) const
+//{
+//    const Ball* other_as_ball = dynamic_cast<const Ball*>(other);
+//    if (other_as_ball != nullptr)
+//    {
+//        return are_touching(*this, *other_as_ball);
+//    }
+//    throw std::logic_error("Not implemented");
+//}
+//
+//
+//void Line::handle_collision(Physical* other)
+//{
+//    auto other_line = dynamic_cast<Line*>(other);
+//    if (other_line != nullptr)
+//    {
+//        return;
+//    }
+//
+//    auto other_ball = dynamic_cast<Ball*>(other);
+//    if (other_ball != nullptr)
+//    {
+//        other_ball->handle_collision(this);
+//        return;
+//    }
+//
+//    throw std::logic_error("Not implemented");
+//}
