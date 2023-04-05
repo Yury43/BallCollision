@@ -50,12 +50,18 @@ void Ball::apply_reactions()
     sf::Vector2f dp = sf::Vector2f(0, 0);
     sf::Vector2f dr = sf::Vector2f(0, 0);
 
+    if (reactions.size() > 1)
+    {
+        std::cout << "reactions: " << reactions.size() << std::endl;
+    }
+
     std::for_each(reactions.begin(), reactions.end(), [&dp](const Reaction& item) {dp += item.impulse_delta; });
     //dp /= static_cast<float>(reactions.size()); // this doesn make sence, the resulting impulse cound be averaged, but delta should be summed 
     std::for_each(reactions.begin(), reactions.end(), [&dr](const Reaction& item) {dr += item.position_delta; });
     //dr /= static_cast<float>(reactions.size()); // this doesn make sence, the resulting position cound be averaged, but delta should be summed 
 
     //std::cout << "dp: " << dp << " ; dr: " << dr << std::endl;
+
 
     reactions.clear();
 

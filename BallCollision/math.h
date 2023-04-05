@@ -24,7 +24,8 @@ inline float dist(const sf::Vector2f& a, const sf::Vector2f& b)
 
 inline sf::Vector2f normalized(const sf::Vector2f& a)
 {
-    return a / norm(a);
+    float a_norm = norm(a);
+    return a_norm > 1e-6 ? a / norm(a) : a / 1.f;
 }
 
 inline float angle(const sf::Vector2f& a, const sf::Vector2f& b)

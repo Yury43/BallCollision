@@ -130,14 +130,9 @@ std::atomic_bool stop_flag = false;
 std::vector<sf::CircleShape> render_buffer;
 std::mutex render_buffer_mutex;
 
-
-void phisics_loop()
+// randomly initialize balls
+void init_random(std::vector<std::shared_ptr<Ball>> & balls)
 {
-    srand(time(NULL));
-
-    std::vector<std::shared_ptr<Ball>> balls;
-
-    // randomly initialize balls
     for (int i = 0; i < (rand() % (MAX_BALLS - MIN_BALLS) + MIN_BALLS); i++)
         //for (int i = 0; i < 1; i++)
     {
@@ -151,26 +146,75 @@ void phisics_loop()
         balls.back()->dir.y = (-5.f + (rand() % 10)) / 3.;
         balls.back()->speed = (30.f + rand() % 30) * 1;
     }
+}
 
-    //balls.clear();
-    //{
-    //    balls.push_back(std::make_shared<Ball>());
+void init_corner_bounce(std::vector<std::shared_ptr<Ball>>& balls)
+{
+    balls.push_back(std::make_shared<Ball>());
+    balls.back()->R = 20;
+    balls.back()->p.x = 100;
+    balls.back()->p.y = 100;
+    balls.back()->dir.x = -1;
+    balls.back()->dir.y = -1;
+    balls.back()->speed = 500;
 
-    //    balls.back()->r = 20;
-    //    balls.back()->p.x = 100;
-    //    balls.back()->p.y = 100;
-    //    balls.back()->dir.x = -1;
-    //    balls.back()->dir.y = -1;
-    //    balls.back()->speed = 500;
+    balls.push_back(std::make_shared<Ball>());
+    balls.back()->R = 20;
+    balls.back()->p.x = 300;
+    balls.back()->p.y = 300;
+    balls.back()->dir.x = 1;
+    balls.back()->dir.y = 1;
+    balls.back()->speed = 500;
+}
 
-    //    balls.push_back(std::make_shared<Ball>());
-    //    balls.back()->r = 20;
-    //    balls.back()->p.x = 300;
-    //    balls.back()->p.y = 300;
-    //    balls.back()->dir.x = 1;
-    //    balls.back()->dir.y = 1;
-    //    balls.back()->speed = 500;
-    //}
+void init_chain(std::vector<std::shared_ptr<Ball>>& balls)
+{
+    float R = 20;
+
+    balls.push_back(std::make_shared<Ball>());
+    balls.back()->R = R;
+    balls.back()->p.x = 100;
+    balls.back()->p.y = 100;
+    balls.back()->dir.x = -1;
+    balls.back()->dir.y = 0;
+    balls.back()->speed = 500;
+
+    balls.push_back(std::make_shared<Ball>());
+    balls.back()->R = R;
+    balls.back()->p.x = 100 + 2 * R + 1;
+    balls.back()->p.y = 100;
+    balls.back()->dir.x = 0;
+    balls.back()->dir.y = 0;
+    balls.back()->speed = 0;
+
+    balls.push_back(std::make_shared<Ball>());
+    balls.back()->R = R;
+    balls.back()->p.x = 100 + 4 * R + 2;
+    balls.back()->p.y = 100;
+    balls.back()->dir.x = 0;
+    balls.back()->dir.y = 0;
+    balls.back()->speed = 0;
+
+    balls.push_back(std::make_shared<Ball>());
+    balls.back()->R = R;
+    balls.back()->p.x = 100 + 6 * R + 3;
+    balls.back()->p.y = 100;
+    balls.back()->dir.x = 0;
+    balls.back()->dir.y = 0;
+    balls.back()->speed = 0;
+}
+
+
+void phisics_loop()
+{
+    srand(time(NULL));
+
+    std::vector<std::shared_ptr<Ball>> balls;
+
+    init_random(balls);
+    //init_corner_bounce(balls);
+    //init_chain(balls);
+
 
 
     sf::Clock clock;
@@ -186,17 +230,25 @@ void phisics_loop()
 
     std::cout << "phisics_loop running" << std::endl;
 
+    float speed_up = 2;
+
     // calculate target iteration delay and next iteration time
-    const auto iteration_delay = std::chrono::milliseconds(1000) / target_framerate;
+    const auto iteration_delay = std::chrono::milliseconds(1000) / target_framerate / speed_up;
     auto next_iteration_time = std::chrono::system_clock::now() + iteration_delay;
 
 
     while (not stop_flag)
     {
         float current_time = clock.getElapsedTime().asSeconds();
-        float deltaTime = current_time - lastime;
+        float deltaTime = (current_time - lastime) * speed_up;
         fpscounter.push(1.0f / (current_time - lastime));
         lastime = current_time;
+
+        // Update positions before searching for collisions to account for current positions 
+        for (auto& ball : balls)
+        {
+            move_ball(*ball, deltaTime);
+        }
 
         // Reduce time complexity by placing balls in a grid of bins, only balls in the same bin and its neighbors may interact
 
@@ -252,7 +304,7 @@ void phisics_loop()
 
             std::vector<Collision> new_collisions;
 
-            // collide with walls 
+            // Collide with walls 
             for (const auto& ball : balls)
             {
                 auto r1 = ball->p;
@@ -280,7 +332,6 @@ void phisics_loop()
                     ball->p.y = WINDOW_Y - R;
                 }
             }
-
 
             // Collide with balls 
             for (auto& ball : balls)
@@ -327,24 +378,20 @@ void phisics_loop()
                 //return sum + norm(ball->velocity()); 
                 });
 
+            // Calculate total kinetic energy change to control accuracy of simulation 
             if (total_energy_prev > 0)
             {
                 float dE = total_energy - total_energy_prev;
+                int dEp = dE / total_energy_prev * 100;
                 if (dE > 1e-3)
                 {
-                    std::cout << "dE " << dE << std::endl;
+                    std::cout << "dE " << dEp << " %" << std::endl;
                 }
             }
             total_energy_prev = total_energy;
         }
 
-        // Update positions 
-        for (auto& ball : balls)
-        {
-            move_ball(*ball, deltaTime);
-        }
 
-        
         // Place shapes to draw in drawing buffer 
         {
 
