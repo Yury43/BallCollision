@@ -197,7 +197,7 @@ void init_chain(std::vector<std::shared_ptr<Ball>>& balls)
     balls.push_back(std::make_shared<Ball>(ball));
 }
 
-void init_billiards(std::vector<std::shared_ptr<Ball>>& balls)
+void init_snooker(std::vector<std::shared_ptr<Ball>>& balls)
 {
     float R = 20;
 
@@ -211,6 +211,7 @@ void init_billiards(std::vector<std::shared_ptr<Ball>>& balls)
     ball.speed = 250;
     balls.push_back(std::make_shared<Ball>(ball));
 
+    
     ball.p.x = WINDOW_X / 2;
     ball.p.y = WINDOW_Y / 2;
     ball.dir.x = 0;
@@ -234,6 +235,11 @@ void init_billiards(std::vector<std::shared_ptr<Ball>>& balls)
     ball.p.y += R * 2;
     balls.push_back(std::make_shared<Ball>(ball));
 
+    for (auto& ball : balls)
+    {
+        ball->R += 0.001 * (4 - rand() % 5);
+    }
+
 }
 
 void phisics_loop()
@@ -242,10 +248,10 @@ void phisics_loop()
 
     std::vector<std::shared_ptr<Ball>> balls;
 
-    init_random(balls);
+    //init_random(balls);
     //init_corner_bounce(balls);
     //init_chain(balls);
-    //init_billiards(balls);
+    init_snooker(balls);
 
     std::unordered_map<int, std::shared_ptr<Ball>> balls_by_id;
     for (const auto& ball : balls)
