@@ -74,6 +74,7 @@ void Ball::handle_collision(Physical* other)
     auto other_line = dynamic_cast<Line*>(other);
     if (other_line != nullptr)
     {
+        //std::cout << "wall" << std::endl;
         // calculate impulse delta 
         auto contact_point = project(*other_line, p);
         auto ball_to_wall = contact_point - p;
@@ -98,6 +99,7 @@ void Ball::handle_collision(Physical* other)
     auto other_ball = dynamic_cast<Ball*>(other);
     if (other_ball != nullptr)
     {
+        //std::cout << "ball" << std::endl;
         // calculate impulse deltas 
         auto v1 = velocity();
         auto v2 = other_ball->velocity();

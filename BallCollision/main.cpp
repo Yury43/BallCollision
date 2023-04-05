@@ -145,7 +145,6 @@ int main()
     //{
     //    balls.push_back(std::make_shared<Ball>());
 
-    //    //int r = 5 + rand() % 5;
     //    balls.back()->r = 20;
     //    balls.back()->p.x = 100;
     //    balls.back()->p.y = 100;
@@ -326,7 +325,11 @@ int main()
                 ball->apply_reactions();
             }
 
-            float total_energy = std::accumulate(balls.begin(), balls.end(), 0., [](float sum, const auto& ball) {return sum + ball->Energy(); });
+            float total_energy = std::accumulate(balls.begin(), balls.end(), 0., [](float sum, const auto& ball) {
+                return sum + ball->Energy(); 
+                //return sum + norm(ball->velocity()); 
+            });
+
             if (total_energy_prev > 0)
             {
                 float dE = total_energy - total_energy_prev;
