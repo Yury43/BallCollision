@@ -6,7 +6,7 @@
 #include <mutex>
 #include <assert.h>
 #include "math.h"
-#include "Physicals.h"
+#include "physicals.h"
 
 constexpr int WINDOW_X = 1024;
 constexpr int WINDOW_Y = 768;
@@ -186,9 +186,10 @@ void phisics_loop()
 
     std::cout << "phisics_loop running" << std::endl;
 
+    // calculate target iteration delay and next iteration time
     const auto iteration_delay = std::chrono::milliseconds(1000) / target_framerate;
-    std::cout << iteration_delay.count() << std::endl;
     auto next_iteration_time = std::chrono::system_clock::now() + iteration_delay;
+
 
     while (not stop_flag)
     {
@@ -210,7 +211,7 @@ void phisics_loop()
         auto find_bin_y = [bin_size, n_bins_y](const Ball& b) {return static_cast<int>(std::round(b.p.y / bin_size)) + 1; };
         auto out_of_range = [n_bins_x, n_bins_y](int bin_x, int bin_y) {return bin_x < 0 or bin_x >= n_bins_x or bin_y < 0 or bin_y >= n_bins_y; };
 
-        // place balls in bins, delete those that escaped 
+        // Place balls in bins, delete those that escaped 
         {
             auto ball_it = balls.begin();
             while (ball_it != balls.end())
@@ -232,7 +233,7 @@ void phisics_loop()
         }
 
         {
-            // remove processed collisions parties of which do not touch anymore 
+            // Remove processed collisions parties of which do not touch anymore 
             {
                 auto it = processed_collisions.begin();
                 while (it != processed_collisions.end())
@@ -281,6 +282,7 @@ void phisics_loop()
             }
 
 
+            // Collide with balls 
             for (auto& ball : balls)
             {
                 size_t bin_x = find_bin_x(*ball);
@@ -290,24 +292,20 @@ void phisics_loop()
                 {
                     for (int j = 0; j < 2; ++j)
                     {
-                        if (!out_of_range(bin_x + i, bin_y + j))
+                        if (out_of_range(bin_x + i, bin_y + j)) continue;
+
+                        for (auto& other_ball : bins[bin_x + i][bin_y + j])
                         {
-                            for (auto& other_ball : bins[bin_x + i][bin_y + j])
-                            {
-                                if (ball->id != other_ball->id)
-                                {
-                                    if (ball->is_touching(other_ball.get()))
-                                    {
-                                        new_collisions.push_back(Collision(ball, other_ball));
-                                    }
-                                }
-                            }
+                            if (ball->id == other_ball->id) continue;
+                            if (!ball->is_touching(other_ball.get())) continue;
+
+                            new_collisions.push_back(Collision(ball, other_ball));
                         }
                     }
                 }
             }
 
-            // process new collisions and mark them accordingly 
+            // Process new collisions and mark them accordingly 
             for (Collision& collision : new_collisions)
             {
                 if (processed_collisions.find(collision) == processed_collisions.end())
@@ -318,7 +316,7 @@ void phisics_loop()
                 }
             }
 
-            // apply new reactions 
+            // Apply new reactions 
             for (auto& ball : balls)
             {
                 ball->apply_reactions();
@@ -334,30 +332,37 @@ void phisics_loop()
                 float dE = total_energy - total_energy_prev;
                 if (dE > 1e-3)
                 {
-                    //std::cout << "dE " << dE << std::endl;
+                    std::cout << "dE " << dE << std::endl;
                 }
             }
             total_energy_prev = total_energy;
         }
 
+        // Update positions 
         for (auto& ball : balls)
         {
             move_ball(*ball, deltaTime);
         }
 
-        std::vector<sf::CircleShape> gballs;
-        gballs.reserve(balls.size());
-        for (const auto& ball: balls)
-        {
-            gballs.push_back(ball_as_shape(*ball));
-        }
-
-        {
-            std::lock_guard<std::mutex> lock(render_buffer_mutex);
-            render_buffer = std::move(gballs);
-        }
-
         
+        // Place shapes to draw in drawing buffer 
+        {
+
+            std::vector<sf::CircleShape> gballs;
+            gballs.reserve(balls.size());
+            for (const auto& ball : balls)
+            {
+                gballs.push_back(ball_as_shape(*ball));
+            }
+
+            {
+                std::lock_guard<std::mutex> lock(render_buffer_mutex);
+                render_buffer = std::move(gballs);
+            }
+        }
+
+
+        // Sleep the remaining time, reserved for iteration and calculate time of next iteration 
         std::this_thread::sleep_until(next_iteration_time);
         next_iteration_time = next_iteration_time + iteration_delay;
 
@@ -414,7 +419,6 @@ int main()
         }
 
         draw_fps(window, fpscounter.getAverage());
-        //std::cout << " fps " << fpscounter.getAverage() << std::endl;
         window.display();
     }
 

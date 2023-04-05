@@ -1,4 +1,4 @@
-#include "Physicals.h"
+#include "physicals.h"
 #include <algorithm>
 #include <iostream>
 #include "math.h"
