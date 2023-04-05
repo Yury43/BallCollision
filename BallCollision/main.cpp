@@ -18,7 +18,7 @@ constexpr int MIN_BALLS = 100;
 constexpr float M_PI = 3.1415926;
 constexpr int target_framerate = 60;
 
-Math::MiddleAverageFilter<float, 100> fpscounter;
+
 
 // TODO to prevent fast balls from escaping and for more accurate model in general one should consider positions on the next tick instead of current one
 
@@ -132,213 +132,210 @@ std::atomic_bool stop_flag = false;
 std::vector<sf::CircleShape> render_buffer;
 std::mutex render_buffer_mutex;
 
-// randomly initialize balls
-void init_random(std::vector<std::shared_ptr<Ball>> & balls)
+class Simulation
 {
-    for (int i = 0; i < (rand() % (MAX_BALLS - MIN_BALLS) + MIN_BALLS); i++)
-        //for (int i = 0; i < 1; i++)
-    {
-        balls.push_back(std::make_shared<Ball>());
-
-        int r = 5 + rand() % 5;
-        balls.back()->R = r;
-        balls.back()->p.x = (r + rand()) % (WINDOW_X - r); // make sure balls dont spawn on the edges 
-        balls.back()->p.y = (r + rand()) % (WINDOW_Y - r);
-        balls.back()->dir.x = (-5.f + (rand() % 10)) / 3.;
-        balls.back()->dir.y = (-5.f + (rand() % 10)) / 3.;
-        balls.back()->speed = (30.f + rand() % 30) * 1;
-    }
-}
-
-void init_corner_bounce(std::vector<std::shared_ptr<Ball>>& balls)
-{
-    Ball ball;
-
-    ball.R = 20;
-    ball.p.x = 100;
-    ball.p.y = 100;
-    ball.dir.x = -1;
-    ball.dir.y = -1;
-    ball.speed = 500;
-
-    balls.push_back(std::make_shared<Ball>(ball));
-
-    ball.p.x = 300;
-    ball.p.y = 300;
-    ball.dir.x = 1;
-    ball.dir.y = 1;
-
-    balls.push_back(std::make_shared<Ball>(ball));
-}
-
-void init_chain(std::vector<std::shared_ptr<Ball>>& balls)
-{
-    float R = 20;
-
-    Ball ball;
-
-    ball.R = R;
-    ball.p.x = 100;
-    ball.p.y = 100;
-    ball.dir.x = -1;
-    ball.dir.y = 0;
-    ball.speed = 500;
-    balls.push_back(std::make_shared<Ball>(ball));
-
-    ball.p.x += 2 * R;
-    ball.dir.x = 0;
-    ball.speed = 0;
-    balls.push_back(std::make_shared<Ball>(ball));
-
-    ball.p.x += 2 * R;
-    balls.push_back(std::make_shared<Ball>(ball));
-
-    ball.p.x += 2 * R;
-    balls.push_back(std::make_shared<Ball>(ball));
-}
-
-void init_snooker(std::vector<std::shared_ptr<Ball>>& balls)
-{
-    float R = 20;
-
-    Ball ball;
-
-    ball.R = R;
-    ball.p.x = WINDOW_X - R - 1;
-    ball.p.y = WINDOW_Y / 2;
-    ball.dir.x = -1;
-    ball.dir.y = 0;
-    ball.speed = 250;
-    balls.push_back(std::make_shared<Ball>(ball));
-
-    
-    ball.p.x = WINDOW_X / 2;
-    ball.p.y = WINDOW_Y / 2;
-    ball.dir.x = 0;
-    ball.speed = 0;
-    balls.push_back(std::make_shared<Ball>(ball));
-
-    ball.p.x -= R * 2 * std::cos(M_PI / 6);
-    ball.p.y += R;
-    balls.push_back(std::make_shared<Ball>(ball));
-
-    ball.p.y -= R * 2;
-    balls.push_back(std::make_shared<Ball>(ball));
-
-    ball.p.x -= R * 2 * std::cos(M_PI / 6);
-    ball.p.y -= R;
-    balls.push_back(std::make_shared<Ball>(ball));
-
-    ball.p.y += R * 2;
-    balls.push_back(std::make_shared<Ball>(ball));
-
-    ball.p.y += R * 2;
-    balls.push_back(std::make_shared<Ball>(ball));
-
-    for (auto& ball : balls)
-    {
-        ball->R += 0.001 * (4 - rand() % 5);
-    }
-
-}
-
-void init_angled(std::vector<std::shared_ptr<Ball>>& balls)
-{
-    float R = 20;
-
-    Ball ball;
-
-    ball.R = R;
-    ball.p.x = WINDOW_X - R - 1;
-    ball.p.y = WINDOW_Y / 2;
-    ball.dir.x = -1;
-    ball.dir.y = 0;
-    ball.speed = 250;
-    balls.push_back(std::make_shared<Ball>(ball));
-
-
-    ball.p.x = WINDOW_X / 2;
-    ball.p.y = WINDOW_Y / 2;
-    ball.dir.x = 0;
-    ball.speed = 0;
-    //balls.push_back(std::make_shared<Ball>(ball));
-
-    ball.p.x -= R * 2 * std::cos(M_PI / 6);
-    ball.p.y += R;
-    balls.push_back(std::make_shared<Ball>(ball));
-
-    //ball.p.y -= R * 2;
-    //balls.push_back(std::make_shared<Ball>(ball));
-
-    //ball.p.x -= R * 2 * std::cos(M_PI / 6);
-    //ball.p.y -= R;
-    //balls.push_back(std::make_shared<Ball>(ball));
-
-    //ball.p.y += R * 2;
-    //balls.push_back(std::make_shared<Ball>(ball));
-
-    //ball.p.y += R * 2;
-    //balls.push_back(std::make_shared<Ball>(ball));
-
-    //for (auto& ball : balls)
-    //{
-    //    ball->R += 0.001 * (4 - rand() % 5);
-    //}
-
-}
-
-void phisics_loop()
-{
-    srand(time(NULL));
-
-    std::vector<std::shared_ptr<Ball>> balls;
-
-    //init_random(balls);
-    //init_corner_bounce(balls);
-    //init_chain(balls);
-    //init_snooker(balls);
-    init_angled(balls);
-
-    std::unordered_map<int, std::shared_ptr<Ball>> balls_by_id;
-    for (const auto& ball : balls)
-    {
-        balls_by_id[ball->id] = ball;
-    }
-
-    sf::Clock clock;
-    float lastime = clock.restart().asSeconds();
-
-
-    float max_r = balls.empty() ? 0 : (*std::max_element(balls.begin(), balls.end(), [](const auto& a, const auto& b) { return a->R < b->R; }))->R;
-    
-
     std::unordered_set<Collision> processed_collisions;
-
+    std::vector<std::shared_ptr<Ball>> balls;
+    std::unordered_map<int, std::shared_ptr<Ball>> balls_by_id;
+    float max_r;
     float total_energy_prev = -1;
 
-    std::cout << "phisics_loop running" << std::endl;
-
-    float speed_up = 1;
-
-    // calculate target iteration delay and next iteration time
-    const auto iteration_delay = std::chrono::milliseconds(1000) / target_framerate / speed_up;
-    auto next_iteration_time = std::chrono::system_clock::now() + iteration_delay;
-
-
-    while (not stop_flag)
+    // randomly initialize balls
+    void init_random(std::vector<std::shared_ptr<Ball>>& balls)
     {
-        float current_time = clock.getElapsedTime().asSeconds();
-        float deltaTime = (current_time - lastime) * speed_up;
-        fpscounter.push(1.0f / (current_time - lastime));
-        lastime = current_time;
+        srand(time(NULL));
 
-        //// Update positions before searching for collisions to account for current positions 
+        for (int i = 0; i < (rand() % (MAX_BALLS - MIN_BALLS) + MIN_BALLS); i++)
+            //for (int i = 0; i < 1; i++)
+        {
+            balls.push_back(std::make_shared<Ball>());
+
+            int r = 5 + rand() % 5;
+            balls.back()->R = r;
+            balls.back()->p.x = (r + rand()) % (WINDOW_X - r); // make sure balls dont spawn on the edges 
+            balls.back()->p.y = (r + rand()) % (WINDOW_Y - r);
+            balls.back()->dir.x = (-5.f + (rand() % 10)) / 3.;
+            balls.back()->dir.y = (-5.f + (rand() % 10)) / 3.;
+            balls.back()->speed = (30.f + rand() % 30) * 1;
+        }
+    }
+
+    void init_corner_bounce(std::vector<std::shared_ptr<Ball>>& balls)
+    {
+        Ball ball;
+
+        ball.R = 20;
+        ball.p.x = 100;
+        ball.p.y = 100;
+        ball.dir.x = -1;
+        ball.dir.y = -1;
+        ball.speed = 500;
+
+        balls.push_back(std::make_shared<Ball>(ball));
+
+        ball.p.x = 300;
+        ball.p.y = 300;
+        ball.dir.x = 1;
+        ball.dir.y = 1;
+
+        balls.push_back(std::make_shared<Ball>(ball));
+    }
+
+    void init_chain(std::vector<std::shared_ptr<Ball>>& balls)
+    {
+        float R = 20;
+
+        Ball ball;
+
+        ball.R = R;
+        ball.p.x = 100;
+        ball.p.y = 100;
+        ball.dir.x = -1;
+        ball.dir.y = 0;
+        ball.speed = 500;
+        balls.push_back(std::make_shared<Ball>(ball));
+
+        ball.p.x += 2 * R;
+        ball.dir.x = 0;
+        ball.speed = 0;
+        balls.push_back(std::make_shared<Ball>(ball));
+
+        ball.p.x += 2 * R;
+        balls.push_back(std::make_shared<Ball>(ball));
+
+        ball.p.x += 2 * R;
+        balls.push_back(std::make_shared<Ball>(ball));
+    }
+
+    void init_snooker(std::vector<std::shared_ptr<Ball>>& balls)
+    {
+        float R = 20;
+
+        Ball ball;
+
+        ball.R = R;
+        ball.p.x = WINDOW_X - R - 1;
+        ball.p.y = WINDOW_Y / 2;
+        ball.dir.x = -1;
+        ball.dir.y = 0;
+        ball.speed = 250;
+        balls.push_back(std::make_shared<Ball>(ball));
+
+
+        ball.p.x = WINDOW_X / 2;
+        ball.p.y = WINDOW_Y / 2;
+        ball.dir.x = 0;
+        ball.speed = 0;
+        balls.push_back(std::make_shared<Ball>(ball));
+
+        ball.p.x -= R * 2 * std::cos(M_PI / 6);
+        ball.p.y += R;
+        balls.push_back(std::make_shared<Ball>(ball));
+
+        ball.p.y -= R * 2;
+        balls.push_back(std::make_shared<Ball>(ball));
+
+        ball.p.x -= R * 2 * std::cos(M_PI / 6);
+        ball.p.y -= R;
+        balls.push_back(std::make_shared<Ball>(ball));
+
+        ball.p.y += R * 2;
+        balls.push_back(std::make_shared<Ball>(ball));
+
+        ball.p.y += R * 2;
+        balls.push_back(std::make_shared<Ball>(ball));
+
+        for (auto& ball : balls)
+        {
+            ball->R += 0.001 * (4 - rand() % 5);
+        }
+
+    }
+
+    void init_angled(std::vector<std::shared_ptr<Ball>>& balls)
+    {
+        float R = 20;
+
+        Ball ball;
+
+        ball.R = R;
+        ball.p.x = WINDOW_X - R - 1;
+        ball.p.y = WINDOW_Y / 2;
+        ball.dir.x = -1;
+        ball.dir.y = 0;
+        ball.speed = 250;
+        balls.push_back(std::make_shared<Ball>(ball));
+
+
+        ball.p.x = WINDOW_X / 2;
+        ball.p.y = WINDOW_Y / 2;
+        ball.dir.x = 0;
+        ball.speed = 0;
+        //balls.push_back(std::make_shared<Ball>(ball));
+
+        ball.p.x -= R * 2 * std::cos(M_PI / 6);
+        ball.p.y += R;
+        balls.push_back(std::make_shared<Ball>(ball));
+
+        //ball.p.y -= R * 2;
+        //balls.push_back(std::make_shared<Ball>(ball));
+
+        //ball.p.x -= R * 2 * std::cos(M_PI / 6);
+        //ball.p.y -= R;
+        //balls.push_back(std::make_shared<Ball>(ball));
+
+        //ball.p.y += R * 2;
+        //balls.push_back(std::make_shared<Ball>(ball));
+
+        //ball.p.y += R * 2;
+        //balls.push_back(std::make_shared<Ball>(ball));
+
         //for (auto& ball : balls)
         //{
-        //    move_ball(*ball, deltaTime);
+        //    ball->R += 0.001 * (4 - rand() % 5);
         //}
 
-        // Reduce time complexity by placing balls in a grid of bins, only balls in the same bin and its neighbors may interact
+    }
+
+public:
+    void init()
+    {
+        //init_random(balls);
+        //init_corner_bounce(balls);
+        //init_chain(balls);
+        //init_snooker(balls);
+        init_angled(balls);
+
+        
+        for (const auto& ball : balls)
+        {
+            balls_by_id[ball->id] = ball;
+        }
+
+        
+
+
+        max_r = balls.empty() ? 0 : (*std::max_element(balls.begin(), balls.end(), [](const auto& a, const auto& b) { return a->R < b->R; }))->R;
+        
+
+
+
+        std::cout << "phisics_loop running" << std::endl;
+
+        
+
+        
+    }
+
+    std::vector<sf::CircleShape> run_iteration(float deltaTime)
+    {
+        //// Update positions before searching for collisions to account for current positions 
+//for (auto& ball : balls)
+//{
+//    move_ball(*ball, deltaTime);
+//}
+
+// Reduce time complexity by placing balls in a grid of bins, only balls in the same bin and its neighbors may interact
 
         float bin_size = max_r * 4;
         int n_bins_x = std::ceil(WINDOW_X / bin_size) + 2;
@@ -400,8 +397,8 @@ void phisics_loop()
                 {
                     continue;
                 }
-     
- 
+
+
                 // Test collision with other balls in bins 
 
                 size_t bin_x = find_bin_x(*ball);
@@ -411,19 +408,19 @@ void phisics_loop()
                 {
                     for (int j = 0; j < 2; ++j)
                     {
-                        if (out_of_range(bin_x + i, bin_y + j)) 
+                        if (out_of_range(bin_x + i, bin_y + j))
                             continue;
 
                         for (auto& other_ball : bins[bin_x + i][bin_y + j])
                         {
-                            if (ball->id == other_ball->id) 
+                            if (ball->id == other_ball->id)
                                 continue;
 
-                            if (!ball->is_touching(other_ball.get())) 
+                            if (!ball->is_touching(other_ball.get()))
                                 continue;
 
 
-                            colliding_pairs.push_back({ball->id, other_ball->id });
+                            colliding_pairs.push_back({ ball->id, other_ball->id });
                         }
                     }
                 }
@@ -450,8 +447,8 @@ void phisics_loop()
             // If collision involves more than 2 balls, chose single pair randomly, leave others for later 
 
             std::vector<Collision> new_collisions;
-            
-            for (const std::pair<int, std::vector<int>> & collision_set : colliding_sets.SetsByParent())
+
+            for (const std::pair<int, std::vector<int>>& collision_set : colliding_sets.SetsByParent())
             {
                 int selected_pair_id;
                 if (collision_set.second.size() == 1)
@@ -468,7 +465,7 @@ void phisics_loop()
                 std::pair<int, int> selected_pair = colliding_pairs[selected_pair_id];
 
                 new_collisions.push_back(Collision(
-                    balls_by_id[selected_pair.first], 
+                    balls_by_id[selected_pair.first],
                     balls_by_id[selected_pair.second]
                 ));
             }
@@ -516,31 +513,52 @@ void phisics_loop()
             move_ball(*ball, deltaTime);
         }
 
-        // Place shapes to draw in drawing buffer 
+        std::vector<sf::CircleShape> gballs;
+        gballs.reserve(balls.size());
+        for (const auto& ball : balls)
         {
+            gballs.push_back(ball_as_shape(*ball));
+        }
 
-            std::vector<sf::CircleShape> gballs;
-            gballs.reserve(balls.size());
-            for (const auto& ball : balls)
-            {
-                gballs.push_back(ball_as_shape(*ball));
-            }
+        return gballs;
+    }
 
+    void phisics_loop()
+    {
+        sf::Clock clock;
+        float lastime = clock.restart().asSeconds();
+        float speed_up = 1;
+        // calculate target iteration delay and next iteration time
+        const auto iteration_delay = std::chrono::milliseconds(1000) / target_framerate / speed_up;
+        auto next_iteration_time = std::chrono::system_clock::now() + iteration_delay;
+
+        while (not stop_flag)
+        {
+            float current_time = clock.getElapsedTime().asSeconds();
+            float deltaTime = (current_time - lastime) * speed_up;
+            lastime = current_time;
+
+            auto gballs = run_iteration(deltaTime);
+
+            // Place shapes to draw in drawing buffer 
             {
                 std::lock_guard<std::mutex> lock(render_buffer_mutex);
                 render_buffer = std::move(gballs);
             }
+
+            // Sleep the remaining time, reserved for iteration and calculate time of next iteration 
+            std::this_thread::sleep_until(next_iteration_time);
+            next_iteration_time = next_iteration_time + iteration_delay;
+
         }
 
-
-        // Sleep the remaining time, reserved for iteration and calculate time of next iteration 
-        std::this_thread::sleep_until(next_iteration_time);
-        next_iteration_time = next_iteration_time + iteration_delay;
-
+        std::cout << "phisics_loop done" << std::endl;
     }
+};
 
-    std::cout << "phisics_loop done" << std::endl;
-}
+
+
+
 
 
 
@@ -549,12 +567,28 @@ int main()
     sf::RenderWindow window(sf::VideoMode(WINDOW_X, WINDOW_Y), "ball collision demo");
     window.setFramerateLimit(target_framerate);
 
+    Simulation sim;
+    sim.init();
+    
+    bool run_async = false;
+    run_async = true;
 
-    std::thread physics_thread(phisics_loop);
+    std::thread physics_thread;
+
+    if (run_async)
+    {
+        physics_thread = std::thread(([&sim] {sim.phisics_loop(); }));
+    }
+    
+
+    sf::Clock clock;
+    float lastime = clock.restart().asSeconds();
+    Math::MiddleAverageFilter<float, 100> fpscounter;
 
     while (window.isOpen())
     {
         sf::Event event;
+        float poll_start = clock.getElapsedTime().asSeconds();
         while (window.pollEvent(event))
         {
             if (event.type == sf::Event::Closed)
@@ -562,6 +596,15 @@ int main()
                 window.close();
             }
         }
+        float poll_end = clock.getElapsedTime().asSeconds();
+
+        float current_time = clock.getElapsedTime().asSeconds();
+        float deltaTime = (current_time - lastime);
+        float simDeltaTime = deltaTime - (poll_end - poll_start);
+        fpscounter.push(1.0f / (current_time - lastime));
+        lastime = current_time;
+
+
 
         /// <summary>
         /// TODO: PLACE COLLISION CODE HERE 
@@ -572,13 +615,21 @@ int main()
         /// Как можно было-бы улучшить текущую архитектуру кода?
         /// Данный код является макетом, вы можете его модифицировать по своему усмотрению
 
-
-        // get data to render from phisics thread;
         std::vector<sf::CircleShape> gballs;
+
+        if (run_async)
         {
-            std::lock_guard<std::mutex> lock(render_buffer_mutex);
-            gballs = std::move(render_buffer);
+            // get data to render from phisics thread;
+            {
+                std::lock_guard<std::mutex> lock(render_buffer_mutex);
+                gballs = std::move(render_buffer);
+            }
         }
+        else
+        {
+            gballs = sim.run_iteration(simDeltaTime);
+        }
+
 
         if (!gballs.empty())
         {
