@@ -106,17 +106,17 @@ void Ball::handle_collision(Physical* other)
         auto r12 = r1 - r2;
         auto r21 = -r12;
 
-        auto v1u = v1 - (m1 * 2 / (m1 + m2)) * dot(v1 - v2, r12) / std::powf(norm(r12), 2) * r12;
-        auto v2u = v2 - (m2 * 2 / (m1 + m2)) * dot(v2 - v1, r21) / std::powf(norm(r21), 2) * r21;
+        auto dv1 = v1 - (m1 * 2 / (m1 + m2)) * dot(v1 - v2, r12) / std::powf(norm(r12), 2) * r12;
+        auto dv2 = v2 - (m2 * 2 / (m1 + m2)) * dot(v2 - v1, r21) / std::powf(norm(r21), 2) * r21;
 
-        if (norm(v1u) > 1e-5f || norm(dr1) > DELTA)
+        if (norm(dv1) > 1e-5f || norm(dr1) > DELTA)
         {
-            reactions.push_back({ v1u, r1 });
+            reactions.push_back({ dv1, r1 });
         }
 
-        if (norm(v2u) > 1e-5f || norm(dr2) > DELTA)
+        if (norm(dv2) > 1e-5f || norm(dr2) > DELTA)
         {
-            other_ball->reactions.push_back({ v2u, r2 });
+            other_ball->reactions.push_back({ dv2, r2 });
         }
 
         return;

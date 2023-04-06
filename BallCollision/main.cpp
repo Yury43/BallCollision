@@ -9,6 +9,8 @@
 #include "math.h"
 #include "physicals.h"
 #include "disjoined_set_union.h"
+#include <iomanip>
+
 
 constexpr int WINDOW_X = 1024;
 constexpr int WINDOW_Y = 768;
@@ -137,11 +139,11 @@ std::mutex render_buffer_mutex;
 
 class Simulation
 {
-    std::unordered_set<Collision> processed_collisions;
     std::vector<std::shared_ptr<Ball>> balls;
     std::unordered_map<int, std::shared_ptr<Ball>> balls_by_id;
     float max_r;
-    float total_energy_prev = -1;
+    double total_energy_prev = -1;
+    double initial_enery = -1;
 
     // randomly initialize balls
     void init_random(std::vector<std::shared_ptr<Ball>>& balls)
@@ -216,42 +218,40 @@ class Simulation
 
         Ball ball;
 
+        // 0
         ball.R = R;
         ball.p.x = WINDOW_X - R - 1;
         ball.p.y = WINDOW_Y / 2;
         ball.dir.x = -1;
         ball.dir.y = 0;
-        ball.speed = 250;
+        ball.speed = 500;
         balls.push_back(std::make_shared<Ball>(ball));
 
-
+        //1 
         ball.p.x = WINDOW_X / 2;
         ball.p.y = WINDOW_Y / 2;
         ball.dir.x = 0;
         ball.speed = 0;
         balls.push_back(std::make_shared<Ball>(ball));
 
-        ball.p.x -= R * 2 * std::cos(M_PI / 6);
-        ball.p.y += R;
-        balls.push_back(std::make_shared<Ball>(ball));
+        for (int j = 2; j <= 5; ++j)
+        {
+            int sign = j % 2 == 0 ? 1 : -1;
 
-        ball.p.y -= R * 2;
-        balls.push_back(std::make_shared<Ball>(ball));
+            ball.p.x -= R * 2 * std::cos(M_PI / 6);
+            ball.p.y += R * 3 * sign;
 
-        ball.p.x -= R * 2 * std::cos(M_PI / 6);
-        ball.p.y -= R;
-        balls.push_back(std::make_shared<Ball>(ball));
+            for (int i = 0; i < j; ++i)
+            {
+                ball.p.y -= R * 2 * sign;
+                balls.push_back(std::make_shared<Ball>(ball));
+            }
+        }
 
-        ball.p.y += R * 2;
-        balls.push_back(std::make_shared<Ball>(ball));
-
-        ball.p.y += R * 2;
-        balls.push_back(std::make_shared<Ball>(ball));
-
-        //for (auto& ball : balls)
-        //{
-        //    ball->R += 0.001 * (4 - rand() % 5);
-        //}
+        for (auto& ball : balls)
+        {
+            ball->R += 0.001 * (4 - rand() % 5);
+        }
 
     }
 
@@ -311,10 +311,10 @@ class Simulation
 public:
     void init()
     {
-        //init_random(balls);
+        init_random(balls);
         //init_corner_bounce(balls);
         //init_chain(balls);
-        init_snooker(balls);
+        //init_snooker(balls);
         //init_angled1(balls);
         //init_angled2(balls);
         
@@ -337,7 +337,7 @@ public:
 
     // Reduce time complexity by placing balls in a grid of bins, only balls in the same bin and its neighbors may interact
 
-        float bin_size = max_r * 4;
+        float bin_size = max_r * 2;
         int n_bins_x = std::ceil(WINDOW_X / bin_size) + 2;
         int n_bins_y = std::ceil(WINDOW_Y / bin_size) + 2;
 
@@ -370,23 +370,6 @@ public:
         }
 
         {
-            // Remove processed collisions parties of which do not touch anymore 
-            {
-                auto it = processed_collisions.begin();
-                while (it != processed_collisions.end())
-                {
-                    if (it->are_touching())
-                    {
-                        ++it;
-                    }
-                    else
-                    {
-                        it->mark_finished();
-                        it = processed_collisions.erase(it);
-                    }
-                }
-            }
-
             std::vector<std::pair<int, int>> colliding_pairs;
 
             for (const auto& ball : balls)
@@ -397,7 +380,6 @@ public:
                 {
                     continue;
                 }
-
 
                 // Test collision with other balls in bins 
 
@@ -449,18 +431,7 @@ public:
 
             for (const std::pair<int, std::vector<int>>& collision_set : colliding_sets.SetsByParent())
             {
-                int selected_pair_id;
-                if (collision_set.second.size() == 1)
-                {
-                    selected_pair_id = collision_set.second.front();
-                }
-                else
-                {
-                    //std::cout << "collision of " << collision_set.second.size() << " pairs" << std::endl;
-
-                    selected_pair_id = collision_set.second[rand() % collision_set.second.size()];
-                }
-
+                int selected_pair_id = collision_set.second[rand() % collision_set.second.size()];
                 std::pair<int, int> selected_pair = colliding_pairs[selected_pair_id];
 
                 new_collisions.push_back(Collision(
@@ -469,17 +440,12 @@ public:
                 ));
             }
 
-            //std::cout << "total collisions: " << colliding_pairs.size() << " selected new collisions: " << new_collisions.size() << std::endl;
 
             // Process new collisions and mark them accordingly 
             for (Collision& collision : new_collisions)
             {
-                //if (processed_collisions.find(collision) == processed_collisions.end())
-                {
-                    collision.handle();
-                    collision.mark_started();
-                    processed_collisions.insert(std::move(collision));
-                }
+                collision.handle();
+                //collision.mark_started();
             }
 
             // Apply new reactions 
@@ -488,22 +454,38 @@ public:
                 ball->apply_reactions();
             }
 
-            float total_energy = std::accumulate(balls.begin(), balls.end(), 0., [](float sum, const auto& ball) {
-                return sum + ball->Energy();
-                //return sum + norm(ball->velocity()); 
-                });
 
-            // Calculate total kinetic energy change to control accuracy of simulation 
-            if (total_energy_prev > 0)
+            if (false)
             {
-                float dE = total_energy - total_energy_prev;
-                int dEp = dE / total_energy_prev * 100;
-                if (std::abs(dE) > 1e-3)
+                // Calculate total kinetic energy change to control accuracy of simulation 
+
+                float total_energy = std::accumulate(balls.begin(), balls.end(), 0., [](float sum, const auto& ball) {
+                    return sum + ball->Energy();
+                    //return sum + norm(ball->velocity()); 
+                    });
+
+                
+
+                if (initial_enery < 0)
                 {
-                    std::cout << "dE " << dEp << " %" << std::endl;
+                    initial_enery = total_energy;
                 }
+
+                if (total_energy_prev > 0)
+                {
+                    float dE = total_energy - total_energy_prev;
+                    float dEp = dE / total_energy_prev * 100;
+                    if (std::abs(dE) > 1e-1)
+                    {
+                        //std::cout << std::showpos << std::fixed << std::setprecision(0) <<  << std::endl;
+                        std::cout << std::fixed << std::setprecision(0)
+                            << "dE " << std::setw(6) << std::showpos << dEp << " %"
+                            << "\ttot E " << std::setw(6) << std::noshowpos << total_energy / initial_enery * 100 << " % "
+                            << std::endl;
+                    }
+                }
+                total_energy_prev = total_energy;
             }
-            total_energy_prev = total_energy;
         }
 
         if (not MOVE_BEFORE_COLLISION)
