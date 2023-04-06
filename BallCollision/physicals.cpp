@@ -13,10 +13,11 @@ uint32_t Physical::next_id = 0;
 //    return norm(project(line, ball.p) - ball.p) <= ball.R;
 //}
 
+constexpr float DELTA = 1e-3f;
 
 static bool are_touching(const Ball& b1, const Ball& b2)
 {
-    return norm(b1.p - b2.p) <= (b1.R + b2.R);
+    return dist(b1.p, b2.p) < b1.R + b2.R + DELTA;
 }
 
 bool Ball::is_touching(const Physical* other) const
@@ -46,10 +47,6 @@ void Ball::apply_reactions()
         return;
     }
 
-    auto p0 = impulse();
-
-    sf::Vector2f v2 = sf::Vector2f(0, 0);
-    sf::Vector2f r2 = sf::Vector2f(0, 0);
 
     if (reactions.size() > 1)
     {
@@ -58,8 +55,7 @@ void Ball::apply_reactions()
 
     assert(reactions.size() == 1);
 
-    v2 = reactions.front().velocity_delta;
-    r2 = reactions.front().position_delta;
+    Reaction reaction = reactions.front();
 
     //std::for_each(reactions.begin(), reactions.end(), [&dp](const Reaction& item) {dp += item.impulse_delta; });
     //dp /= static_cast<float>(reactions.size()); // this doesn make sence, the resulting impulse cound be averaged, but delta should be summed 
@@ -68,40 +64,15 @@ void Ball::apply_reactions()
 
     //std::cout << "dp: " << dp << " ; dr: " << dr << std::endl;
 
-
     reactions.clear();
 
-    p = r2;
-    speed = norm(v2);
-    dir = normalized(v2);
+    p = reaction.corrected_position;
+    speed = norm(reaction.velocity);
+    dir = normalized(reaction.velocity);
 }
 
 void Ball::handle_collision(Physical* other)
 {
-    //auto other_line = dynamic_cast<Line*>(other);
-    //if (other_line != nullptr)
-    //{
-    //    //std::cout << "wall" << std::endl;
-    //    // calculate impulse delta 
-    //    auto contact_point = project(*other_line, p);
-    //    auto ball_to_wall = contact_point - p;
-
-    //    sf::Vector2f p0 = impulse();
-    //    sf::Vector2f pn = project(p0, ball_to_wall);
-
-    //    auto dp = -2.f * pn;
-
-    //    // correct position, placing ball on the point of contact 
-    //    auto dr = -normalized(ball_to_wall) * (R - norm(ball_to_wall));
-
-    //    if (norm(dp) > 1e-6)
-    //    {
-    //        //std::cout << "dp: " << dp << " ; dr: " << dr << std::endl;
-    //        reactions.push_back({ dp, dr });
-    //    }
-
-    //    return;
-    //}
 
     auto other_ball = dynamic_cast<Ball*>(other);
     if (other_ball != nullptr)
@@ -117,18 +88,25 @@ void Ball::handle_collision(Physical* other)
 
         // correct positions 
 
-        auto c = (r1 + r2) / 2.f;
-        auto drc1 = r1 - c;
-        auto drc2 = r2 - c;
-        auto dr1 = normalized(drc1) * (R - norm(drc1) + 1e-2f);
-        auto dr2 = normalized(drc2) * (R - norm(drc2) + 1e-2f);
+        auto r12 = r2 - r1;
+        auto dr1 = sf::Vector2f(0, 0);
+        auto dr2 = sf::Vector2f(0, 0);
 
-        r1 = r1 + dr1;
-        r2 = r2 + dr2;
+        if (norm(r12) < R + other_ball->R + DELTA)
+        {
+            auto c = (r1 + r2) / 2.f;
+            auto drc1 = r1 - c;
+            auto drc2 = r2 - c;
+            dr1 = normalized(drc1) * (R - norm(drc1) + DELTA * 2);
+            dr2 = normalized(drc2) * (other_ball->R - norm(drc2) + DELTA * 2);
+
+            r1 = r1 + dr1;
+            r2 = r2 + dr2;
+        }
 
         // calculate velocity deltas 
 
-        auto t = normalized(r2 - r1);
+        auto t = normalized(r12);
         auto n = sf::Vector2f(t.y, t.x);
         
         float v1t = dot(v1, t);
@@ -137,18 +115,18 @@ void Ball::handle_collision(Physical* other)
         float v1n = norm(v1 - v1t * t);
         float v2n = norm(v2 - v2t * t);
 
-        float v1t2 = (m2 * v2t * 2.f + v1t * (m1 - m2)) / (m1 + m2);
-        float v2t2 = (m1 * v1t * 2.f + v2t * (m2 - m1)) / (m1 + m2);
+        float v1t2 = (m2 * v2t * 2 + v1t * (m1 - m2)) / (m1 + m2);
+        float v2t2 = (m1 * v1t * 2 + v2t * (m2 - m1)) / (m1 + m2);
 
         auto v12 = t * v1t2 + n * v1n;
         auto v22 = t * v2t2 + n * v2n;
 
-        if (norm(v12) > 1e-6 || norm(dr1) > 1e-6)
+        if (norm(v12) > 1e-5f || norm(dr1) > DELTA)
         {
             reactions.push_back({ v12, r1 });
         }
 
-        if (norm(v22) > 1e-6 || norm(dr2) > 1e-6)
+        if (norm(v22) > 1e-5f || norm(dr2) > DELTA)
         {
             other_ball->reactions.push_back({ v22, r2 });
         }

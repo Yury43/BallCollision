@@ -312,10 +312,10 @@ class Simulation
 public:
     void init()
     {
-        //init_random(balls);
+        init_random(balls);
         //init_corner_bounce(balls);
         //init_chain(balls);
-        init_snooker(balls);
+        //init_snooker(balls);
         //init_angled(balls);
         
         for (const auto& ball : balls)
@@ -475,7 +475,7 @@ public:
             // Process new collisions and mark them accordingly 
             for (Collision& collision : new_collisions)
             {
-                if (processed_collisions.find(collision) == processed_collisions.end())
+                //if (processed_collisions.find(collision) == processed_collisions.end())
                 {
                     collision.handle();
                     collision.mark_started();
