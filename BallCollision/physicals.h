@@ -2,7 +2,7 @@
 #include <cstdint>
 #include <SFML/System/Vector2.hpp>
 #include <vector>
-#include "math.h"
+#include "vector_math.h"
 #include <iostream>
 
 class Physical

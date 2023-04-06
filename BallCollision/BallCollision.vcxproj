@@ -150,7 +150,7 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="disjoined_set_union.h" />
-    <ClInclude Include="math.h" />
+    <ClInclude Include="vector_math.h" />
     <ClInclude Include="MiddleAverageFilter.h" />
     <ClInclude Include="physicals.h" />
   </ItemGroup>

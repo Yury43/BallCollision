@@ -2,7 +2,7 @@
 #include <algorithm>
 #include <iostream>
 #include <assert.h>
-#include "math.h"
+#include "vector_math.h"
 
 uint32_t Physical::next_id = 0;
 

@@ -6,7 +6,7 @@
 #include <functional>
 #include <mutex>
 #include <assert.h>
-#include "math.h"
+#include "vector_math.h"
 #include "physicals.h"
 #include "disjoined_set_union.h"
 #include <iomanip>
