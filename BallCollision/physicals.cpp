@@ -47,7 +47,6 @@ void Ball::apply_reactions()
         return;
     }
 
-
     if (reactions.size() > 1)
     {
         std::cout << "reactions: " << reactions.size() << std::endl;
@@ -73,26 +72,18 @@ void Ball::apply_reactions()
 
 void Ball::handle_collision(Physical* other)
 {
-
     auto other_ball = dynamic_cast<Ball*>(other);
     if (other_ball != nullptr)
     {
-        float m1 = mass();
-        float m2 = other_ball->mass();
-
         auto r1 = p;
         auto r2 = other_ball->p;
 
-        auto v1 = velocity();
-        auto v2 = other_ball->velocity();
-
         // correct positions 
-
-        auto r12 = r2 - r1;
+        
         auto dr1 = sf::Vector2f(0, 0);
         auto dr2 = sf::Vector2f(0, 0);
 
-        if (norm(r12) < R + other_ball->R + DELTA)
+        if (norm(r1 - r2) < R + other_ball->R + DELTA)
         {
             auto c = (r1 + r2) / 2.f;
             auto drc1 = r1 - c;
@@ -106,29 +97,26 @@ void Ball::handle_collision(Physical* other)
 
         // calculate velocity deltas 
 
-        auto t = normalized(r12);
-        auto n = sf::Vector2f(t.y, t.x);
-        
-        float v1t = dot(v1, t);
-        float v2t = dot(v2, t);
+        float m1 = mass();
+        float m2 = other_ball->mass();
 
-        float v1n = norm(v1 - v1t * t);
-        float v2n = norm(v2 - v2t * t);
+        auto v1 = velocity();
+        auto v2 = other_ball->velocity();
 
-        float v1t2 = (m2 * v2t * 2 + v1t * (m1 - m2)) / (m1 + m2);
-        float v2t2 = (m1 * v1t * 2 + v2t * (m2 - m1)) / (m1 + m2);
+        auto r12 = r1 - r2;
+        auto r21 = -r12;
 
-        auto v12 = t * v1t2 + n * v1n;
-        auto v22 = t * v2t2 + n * v2n;
+        auto v1u = v1 - (m1 * 2 / (m1 + m2)) * dot(v1 - v2, r12) / std::powf(norm(r12), 2) * r12;
+        auto v2u = v2 - (m2 * 2 / (m1 + m2)) * dot(v2 - v1, r21) / std::powf(norm(r21), 2) * r21;
 
-        if (norm(v12) > 1e-5f || norm(dr1) > DELTA)
+        if (norm(v1u) > 1e-5f || norm(dr1) > DELTA)
         {
-            reactions.push_back({ v12, r1 });
+            reactions.push_back({ v1u, r1 });
         }
 
-        if (norm(v22) > 1e-5f || norm(dr2) > DELTA)
+        if (norm(v2u) > 1e-5f || norm(dr2) > DELTA)
         {
-            other_ball->reactions.push_back({ v22, r2 });
+            other_ball->reactions.push_back({ v2u, r2 });
         }
 
         return;
