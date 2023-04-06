@@ -2,31 +2,33 @@
 
 #include <vector>
 #include <memory>
-#include <time.h>
+#include <random>
 #include "physicals.h"
 #include "constants.h"
+#include "randgen.h"
+
 
 // randomly initialize balls
-void init_random(std::vector<std::shared_ptr<Ball>>& balls)
+inline void init_random(std::vector<std::shared_ptr<Ball>>& balls)
 {
-    srand(time(NULL));
-
-    for (int i = 0; i < (rand() % (MAX_BALLS - MIN_BALLS) + MIN_BALLS); i++)
+    std::mt19937 rand_gen = RandGen::get();
+    
+    for (int i = 0; i < (rand_gen() % (MAX_BALLS - MIN_BALLS) + MIN_BALLS); i++)
         //for (int i = 0; i < 1; i++)
     {
         balls.push_back(std::make_shared<Ball>());
 
-        int r = 5 + rand() % 5;
+        int r = 5 + rand_gen() % 5;
         balls.back()->R = r;
-        balls.back()->p.x = (r + rand()) % (WINDOW_X - r); // make sure balls dont spawn on the edges 
-        balls.back()->p.y = (r + rand()) % (WINDOW_Y - r);
-        balls.back()->dir.x = (-5.f + (rand() % 10)) / 3.;
-        balls.back()->dir.y = (-5.f + (rand() % 10)) / 3.;
-        balls.back()->speed = (30.f + rand() % 30) * 1;
+        balls.back()->p.x = (r + rand_gen()) % (WINDOW_X - r); // make sure balls dont spawn on the edges 
+        balls.back()->p.y = (r + rand_gen()) % (WINDOW_Y - r);
+        balls.back()->dir.x = (-5.f + (rand_gen() % 10)) / 3.f;
+        balls.back()->dir.y = (-5.f + (rand_gen() % 10)) / 3.f;
+        balls.back()->speed = (30 + rand_gen() % 30) * 1;
     }
 }
 
-void init_corner_bounce(std::vector<std::shared_ptr<Ball>>& balls)
+inline void init_corner_bounce(std::vector<std::shared_ptr<Ball>>& balls)
 {
     Ball ball;
 
@@ -47,7 +49,7 @@ void init_corner_bounce(std::vector<std::shared_ptr<Ball>>& balls)
     balls.push_back(std::make_shared<Ball>(ball));
 }
 
-void init_chain(std::vector<std::shared_ptr<Ball>>& balls)
+inline void init_chain(std::vector<std::shared_ptr<Ball>>& balls)
 {
     float R = 20;
 
@@ -73,7 +75,7 @@ void init_chain(std::vector<std::shared_ptr<Ball>>& balls)
     balls.push_back(std::make_shared<Ball>(ball));
 }
 
-void init_snooker(std::vector<std::shared_ptr<Ball>>& balls)
+inline void init_snooker(std::vector<std::shared_ptr<Ball>>& balls)
 {
     float R = 20;
 
@@ -81,23 +83,23 @@ void init_snooker(std::vector<std::shared_ptr<Ball>>& balls)
 
     // 0
     ball.R = R;
-    ball.p.x = WINDOW_X - R - 1;
-    ball.p.y = WINDOW_Y / 2;
+    ball.p.x = 1.f * WINDOW_X - R - 1;
+    ball.p.y = 1.f * WINDOW_Y / 2;
     ball.dir.x = -1;
     ball.dir.y = 0;
     ball.speed = 500;
     balls.push_back(std::make_shared<Ball>(ball));
 
     //1 
-    ball.p.x = WINDOW_X / 2;
-    ball.p.y = WINDOW_Y / 2;
+    ball.p.x = 1.f * WINDOW_X / 2;
+    ball.p.y = 1.f * WINDOW_Y / 2;
     ball.dir.x = 0;
     ball.speed = 0;
     balls.push_back(std::make_shared<Ball>(ball));
 
     for (int j = 2; j <= 5; ++j)
     {
-        int sign = j % 2 == 0 ? 1 : -1;
+        float sign = j % 2 == 0 ? 1 : -1;
 
         ball.p.x -= R * 2 * std::cos(M_PI / 6);
         ball.p.y += R * 3 * sign;
@@ -109,52 +111,54 @@ void init_snooker(std::vector<std::shared_ptr<Ball>>& balls)
         }
     }
 
-    for (auto& ball : balls)
+    std::mt19937 rand_gen = RandGen::get();
+    
+    for (auto& b : balls)
     {
-        ball->R += 0.001 * (4 - rand() % 5);
+        b->R += 0.001f * (4 - rand_gen() % 5);
     }
 
 }
 
-void init_angled1(std::vector<std::shared_ptr<Ball>>& balls)
+inline void init_angled1(std::vector<std::shared_ptr<Ball>>& balls)
 {
     float R = 20;
 
     Ball ball;
 
     ball.R = R;
-    ball.p.x = WINDOW_X - R - 1;
-    ball.p.y = WINDOW_Y / 2;
+    ball.p.x = 1.f * WINDOW_X - R - 1;
+    ball.p.y = 1.f * WINDOW_Y / 2;
     ball.dir.x = -1;
     ball.dir.y = 0;
     ball.speed = 250;
     balls.push_back(std::make_shared<Ball>(ball));
 
-    ball.p.x = WINDOW_X / 2;
-    ball.p.y = WINDOW_Y / 2;
+    ball.p.x = 1.f * WINDOW_X / 2;
+    ball.p.y = 1.f * WINDOW_Y / 2;
     ball.p.y += R;
     ball.dir.x = 0;
     ball.speed = 0;
     balls.push_back(std::make_shared<Ball>(ball));
 }
 
-void init_angled2(std::vector<std::shared_ptr<Ball>>& balls)
+inline void init_angled2(std::vector<std::shared_ptr<Ball>>& balls)
 {
     float R = 20;
 
     Ball ball;
 
     ball.R = R;
-    ball.p.x = WINDOW_X - R - 1;
-    ball.p.y = WINDOW_Y / 2;
+    ball.p.x = 1.f * WINDOW_X - R - 1;
+    ball.p.y = 1.f * WINDOW_Y / 2;
     ball.dir.x = -1;
     ball.dir.y = 0;
     ball.speed = 250;
     balls.push_back(std::make_shared<Ball>(ball));
 
-    ball.p.x = WINDOW_X / 2;
-    ball.p.y = WINDOW_Y / 2;
-    ball.p.y -= R * 1.5;
+    ball.p.x = 1.f * WINDOW_X / 2;
+    ball.p.y = 1.f * WINDOW_Y / 2;
+    ball.p.y -= R * 1.5f;
     ball.dir.x = 0;
     ball.speed = 0;
     balls.push_back(std::make_shared<Ball>(ball));

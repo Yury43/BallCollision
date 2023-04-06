@@ -2,8 +2,8 @@
 
 #include <SFML/System/Vector2.hpp>
 #include <vector>
-#include <iostream>
 #include "vector_math.h"
+
 
 class Physical
 {
@@ -12,13 +12,15 @@ public:
     Physical() : id(next_id++) 
     { 
         //std::cout << "created Physical #" << id << std::endl; 
-    };
+    }
 
-
-    virtual ~Physical(){}
+    Physical(const Physical &_) = delete;
+    Physical(Physical &&_) = delete;
+    
+    virtual ~Physical() = default;
 
     virtual bool is_touching(const Physical* other) const = 0;
-    virtual void mark_colliding(bool is_colliding) {};
+    virtual void mark_colliding(bool is_colliding) {}
     virtual void handle_collision(Physical* other) = 0;
 
 private:
@@ -31,6 +33,7 @@ struct Reaction
     sf::Vector2f corrected_position = { 0, 0 };
 };
 
+
 class Ball : public Physical
 {
 public:
@@ -40,11 +43,14 @@ public:
     float speed = 0;
     sf::Color color = sf::Color::White;
 
-    Ball() : Physical() {};
+    Ball() = default;
 
     Ball(const Ball& other);
-
-    virtual ~Ball() {};
+    Ball(Ball &&_) = delete;
+    Ball operator =(const Ball & _) = delete;
+    Ball operator =(const Ball && _) = delete;
+    
+    ~Ball() override = default;
 
     bool is_touching(const Physical* other) const override;
 
@@ -56,7 +62,7 @@ public:
     sf::Vector2f momentum() const;
     double energy() const;
 
-    bool test_and_handle_wall_collision(int left, int top, int right, int bottom);
+    bool test_and_handle_wall_collision(float left, float top, float right, float bottom);
     void apply_reactions();
 
 private:

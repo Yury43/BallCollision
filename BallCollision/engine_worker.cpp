@@ -1,7 +1,8 @@
+#include <iostream>
 #include "engine_worker.h"
 #include "constants.h"
 
-EngineWorker::EngineWorker(bool async_mode_) : async_mode(async_mode_)
+EngineWorker::EngineWorker(const bool async_mode_) : async_mode(async_mode_)
 {
 
 }
@@ -19,18 +20,18 @@ EngineWorker::~EngineWorker()
 void EngineWorker::engine_loop()
 {
     sf::Clock clock;
-    float lastime = clock.restart().asSeconds();
+    float last_time = clock.restart().asSeconds();
     float speed_up = 2;
     // calculate target iteration delay and next iteration time
     const auto iteration_delay = std::chrono::milliseconds(1000) / TARGET_FRAMERATE / speed_up;
     auto next_iteration_time = std::chrono::system_clock::now() + iteration_delay;
-    std::cout << "phisics_loop running" << std::endl;
+    std::cout << "physics_loop running" << std::endl;
 
     while (run_flag)
     {
         float current_time = clock.getElapsedTime().asSeconds();
-        float deltaTime = (current_time - lastime) * speed_up;
-        lastime = current_time;
+        float deltaTime = (current_time - last_time) * speed_up;
+        last_time = current_time;
 
         auto gballs = engine.run_iteration(deltaTime / speed_up);
 
@@ -46,7 +47,7 @@ void EngineWorker::engine_loop()
 
     }
 
-    std::cout << "phisics_loop done" << std::endl;
+    std::cout << "physics_loop done" << std::endl;
 }
 
 void EngineWorker::run()
@@ -58,7 +59,7 @@ void EngineWorker::run()
     }
 }
 
-std::vector<sf::CircleShape> EngineWorker::get_update(float simDeltaTime)
+std::vector<sf::CircleShape> EngineWorker::get_update(const float sim_delta_time)
 {
     if (async_mode)
     {
@@ -67,7 +68,7 @@ std::vector<sf::CircleShape> EngineWorker::get_update(float simDeltaTime)
             throw std::logic_error("Can't get update, engine is not running!");
         }
 
-        // get data to render from phisics thread;
+        // get data to render from physics thread;
         {
             std::lock_guard<std::mutex> lock(render_buffer_mutex);
             return std::move(render_buffer);
@@ -75,6 +76,6 @@ std::vector<sf::CircleShape> EngineWorker::get_update(float simDeltaTime)
     }
     else
     {
-        return engine.run_iteration(simDeltaTime);
+        return engine.run_iteration(sim_delta_time);
     }
 }

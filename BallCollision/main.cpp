@@ -1,4 +1,5 @@
 #include <iostream>
+
 #include "SFML/Graphics.hpp"
 #include "MiddleAverageFilter.h"
 #include "constants.h"
@@ -8,13 +9,14 @@
 // TODO to prevent fast balls from escaping and for more accurate model in general one should consider positions on the next tick instead of current one
 
 
-void draw_fps(sf::RenderWindow& window, float fps)
+void draw_fps(sf::RenderWindow& window, const float fps)
 {
     char c[32];
     snprintf(c, 32, "FPS: %f", fps);
     sf::String str(c);
     window.setTitle(str);
 }
+
 
 int main()
 {
@@ -25,8 +27,8 @@ int main()
     sim.run();
     
     sf::Clock clock;
-    float lastime = clock.restart().asSeconds();
-    Math::MiddleAverageFilter<float, 100> fpscounter;
+    float last_time = clock.restart().asSeconds();
+    Math::MiddleAverageFilter<float, 100> fps_counter;
 
     while (window.isOpen())
     {
@@ -34,7 +36,8 @@ int main()
         float poll_start = clock.getElapsedTime().asSeconds();
         while (window.pollEvent(event))
         {
-            if (event.type == sf::Event::Closed)
+            if (event.type == sf::Event::Closed ||
+                event.key.code == sf::Keyboard::Escape)
             {
                 window.close();
             }
@@ -42,24 +45,24 @@ int main()
         float poll_end = clock.getElapsedTime().asSeconds();
 
         float current_time = clock.getElapsedTime().asSeconds();
-        float deltaTime = (current_time - lastime);
+        float deltaTime = (current_time - last_time);
         float simDeltaTime = deltaTime - (poll_end - poll_start);
-        fpscounter.push(1.0f / (current_time - lastime));
-        lastime = current_time;
+        fps_counter.push(1.0f / (current_time - last_time));
+        last_time = current_time;
 
 
-        std::vector<sf::CircleShape> gballs = sim.get_update(simDeltaTime);
+        std::vector<sf::CircleShape> shapes = sim.get_update(simDeltaTime);
 
-        if (!gballs.empty())
+        if (!shapes.empty())
         {
             window.clear();
-            for (const auto& gball : gballs)
+            for (const auto& shape : shapes)
             {
-                window.draw(gball);
+                window.draw(shape);
             }
         }
 
-        draw_fps(window, fpscounter.getAverage());
+        draw_fps(window, fps_counter.getAverage());
         window.display();
     }
 

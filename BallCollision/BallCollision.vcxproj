@@ -162,6 +162,9 @@
     <ClInclude Include="MiddleAverageFilter.h" />
     <ClInclude Include="physicals.h" />
   </ItemGroup>
+  <ItemGroup>
+    <ClInclude Include="randgen.h" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>

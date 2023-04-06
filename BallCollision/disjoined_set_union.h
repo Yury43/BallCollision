@@ -5,7 +5,8 @@
 class DisjoinedSetUnion
 {
 public:
-    DisjoinedSetUnion(int n)
+
+    explicit DisjoinedSetUnion(const int n)
     {
         parent.resize(n);
         size.resize(n);
@@ -16,17 +17,17 @@ public:
         }
     }
 
-    int FindSet(int v)
+    int find_set(int const v)
     {
         if (v == parent[v])
             return v;
-        return parent[v] = FindSet(parent[v]);
+        return parent[v] = find_set(parent[v]);
     }
 
-    void Join(int a, int b)
+    void join(int a, int b)
     {
-        a = FindSet(a);
-        b = FindSet(b);
+        a = find_set(a);
+        b = find_set(b);
 
         if (a != b)
         {
@@ -39,12 +40,12 @@ public:
         }
     }
 
-    int GetSetSize(int v)
+    int get_set_size(int const v)
     {
-        return size[FindSet(v)];
+        return size[find_set(v)];
     }
 
-    int CountSets()
+    int count_sets() const 
     {
         int cnt = 0;
         for (int v = 0; v < parent.size(); ++v)
@@ -56,13 +57,13 @@ public:
         return cnt;
     }
 
-    std::unordered_map<int, std::vector<int>> SetsByParent()
+    std::unordered_map<int, std::vector<int>> sets_by_parent()
     {
         std::unordered_map<int, std::vector<int>> labeledGroups;
 
         for (int v = 0; v < parent.size(); ++v)
         {
-            int p = FindSet(v);
+            int p = find_set(v);
             if (labeledGroups.find(p) != labeledGroups.end())
             {
                 labeledGroups[p].push_back(v);
@@ -81,7 +82,7 @@ private:
     std::vector<int> parent;
     std::vector<int> size;
 
-    void MakeSet(int v)
+    void MakeSet(const int v)
     {
         parent[v] = v;
         size[v] = 1;

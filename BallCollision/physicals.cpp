@@ -1,7 +1,7 @@
 
 #include <algorithm>
 #include <iostream>
-#include <assert.h>
+#include <cassert>
 #include "physicals.h"
 #include "vector_math.h"
 
@@ -27,7 +27,7 @@ bool Ball::is_touching(const Physical* other) const
     //{
     //    return are_touching(*other_as_line, *this);
     //}
-    const Ball* other_as_ball = dynamic_cast<const Ball*>(other);
+    auto other_as_ball = dynamic_cast<const Ball*>(other);
     if (other_as_ball != nullptr)
     {
         return are_touching(*this, *other_as_ball);
@@ -36,7 +36,7 @@ bool Ball::is_touching(const Physical* other) const
 }
 
 
-void Ball::mark_colliding(bool is_colliding)
+void Ball::mark_colliding(const bool is_colliding)
 {
     color = is_colliding ? sf::Color::Red : sf::Color::White;
 }
@@ -58,9 +58,9 @@ void Ball::apply_reactions()
     Reaction reaction = reactions.front();
 
     //std::for_each(reactions.begin(), reactions.end(), [&dp](const Reaction& item) {dp += item.impulse_delta; });
-    //dp /= static_cast<float>(reactions.size()); // this doesn make sence, the resulting impulse cound be averaged, but delta should be summed 
+    //dp /= static_cast<float>(reactions.size()); // this doesnt make sense, the resulting impulse could be averaged, but delta should be summed 
     //std::for_each(reactions.begin(), reactions.end(), [&dr](const Reaction& item) {dr += item.position_delta; });
-    //dr /= static_cast<float>(reactions.size()); // this doesn make sence, the resulting position cound be averaged, but delta should be summed 
+    //dr /= static_cast<float>(reactions.size()); // this doesnt make sense, the resulting position could be averaged, but delta should be summed 
 
     //std::cout << "dp: " << dp << " ; dr: " << dr << std::endl;
 
@@ -126,7 +126,7 @@ void Ball::handle_collision(Physical* other)
     throw std::logic_error("Not implemented");
 }
 
-Ball::Ball(const Ball& other) : Physical()
+Ball::Ball(const Ball& other)
 {
     this->p = other.p;
     this->dir = other.dir;
@@ -153,10 +153,10 @@ sf::Vector2f Ball::momentum() const
 
 double Ball::energy() const
 {
-    return std::pow(1. * norm(velocity()), 2) * mass() / 2;
+    return std::pow(norm(velocity()), 2) * static_cast<double>(mass()) / 2;
 }
 
-bool Ball::test_and_handle_wall_collision(int left, int top, int right, int bottom)
+bool Ball::test_and_handle_wall_collision(const float left, const float top, const float right, const float bottom)
 {
     bool collided = false;
 
