@@ -35,7 +35,7 @@ namespace std
     };
 }
 
-inline bool operator == (const Collision& left, const Collision& right)
+static inline bool operator == (const Collision& left, const Collision& right)
 {
     return left.cid == right.cid;
 }

@@ -146,6 +146,8 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="collision.cpp" />
+    <ClCompile Include="engine.cpp" />
+    <ClCompile Include="engine_worker.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="physicals.cpp" />
   </ItemGroup>
@@ -153,6 +155,8 @@
     <ClInclude Include="collision.h" />
     <ClInclude Include="constants.h" />
     <ClInclude Include="disjoined_set_union.h" />
+    <ClInclude Include="engine_worker.h" />
+    <ClInclude Include="engine.h" />
     <ClInclude Include="scenarios.h" />
     <ClInclude Include="vector_math.h" />
     <ClInclude Include="MiddleAverageFilter.h" />

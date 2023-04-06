@@ -1,3 +1,4 @@
+
 #include <algorithm>
 #include <iostream>
 #include <assert.h>
@@ -33,6 +34,7 @@ bool Ball::is_touching(const Physical* other) const
     }
     throw std::logic_error("Not implemented");
 }
+
 
 void Ball::mark_colliding(bool is_colliding)
 {
@@ -186,7 +188,6 @@ bool Ball::test_and_handle_wall_collision(int left, int top, int right, int bott
 
     return collided;
 }
-
 
 //bool Line::is_touching(const Physical* other) const
 //{
