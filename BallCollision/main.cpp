@@ -16,8 +16,11 @@ constexpr int WINDOW_Y = 768;
 constexpr int MAX_BALLS = 300;
 constexpr int MIN_BALLS = 100;
 constexpr float M_PI = 3.1415926;
-constexpr int target_framerate = 60;
-
+constexpr int TARGET_FRAMERATE = 60;
+//constexpr bool ASYNC_PHYS = false;
+constexpr bool ASYNC_PHYS = true;
+//constexpr bool MOVE_BEFORE_COLLISION = false; // Update positions after searching for collisions to render state preceding collision of next iteration 
+constexpr bool MOVE_BEFORE_COLLISION = true; // Update positions before searching for collisions to account for current positions results in a more accurate sim 
 
 
 // TODO to prevent fast balls from escaping and for more accurate model in general one should consider positions on the next tick instead of current one
@@ -245,10 +248,10 @@ class Simulation
         ball.p.y += R * 2;
         balls.push_back(std::make_shared<Ball>(ball));
 
-        for (auto& ball : balls)
-        {
-            ball->R += 0.001 * (4 - rand() % 5);
-        }
+        //for (auto& ball : balls)
+        //{
+        //    ball->R += 0.001 * (4 - rand() % 5);
+        //}
 
     }
 
@@ -297,45 +300,42 @@ class Simulation
 
     }
 
+
+    void move_balls(float deltaTime)
+    {
+        for (auto& ball : balls)
+        {
+            move_ball(*ball, deltaTime);
+        }
+    }
+
 public:
     void init()
     {
         //init_random(balls);
         //init_corner_bounce(balls);
         //init_chain(balls);
-        //init_snooker(balls);
-        init_angled(balls);
-
+        init_snooker(balls);
+        //init_angled(balls);
         
         for (const auto& ball : balls)
         {
             balls_by_id[ball->id] = ball;
         }
-
         
-
-
         max_r = balls.empty() ? 0 : (*std::max_element(balls.begin(), balls.end(), [](const auto& a, const auto& b) { return a->R < b->R; }))->R;
-        
-
-
-
-        std::cout << "phisics_loop running" << std::endl;
-
-        
-
-        
     }
 
     std::vector<sf::CircleShape> run_iteration(float deltaTime)
     {
-        //// Update positions before searching for collisions to account for current positions 
-//for (auto& ball : balls)
-//{
-//    move_ball(*ball, deltaTime);
-//}
 
-// Reduce time complexity by placing balls in a grid of bins, only balls in the same bin and its neighbors may interact
+        if (MOVE_BEFORE_COLLISION)
+        {
+            move_balls(deltaTime);
+        }
+
+
+    // Reduce time complexity by placing balls in a grid of bins, only balls in the same bin and its neighbors may interact
 
         float bin_size = max_r * 4;
         int n_bins_x = std::ceil(WINDOW_X / bin_size) + 2;
@@ -507,10 +507,9 @@ public:
             total_energy_prev = total_energy;
         }
 
-        // Update positions after handling collisions render collisions of next iteration 
-        for (auto& ball : balls)
+        if (not MOVE_BEFORE_COLLISION)
         {
-            move_ball(*ball, deltaTime);
+            move_balls(deltaTime);
         }
 
         std::vector<sf::CircleShape> gballs;
@@ -529,8 +528,9 @@ public:
         float lastime = clock.restart().asSeconds();
         float speed_up = 1;
         // calculate target iteration delay and next iteration time
-        const auto iteration_delay = std::chrono::milliseconds(1000) / target_framerate / speed_up;
+        const auto iteration_delay = std::chrono::milliseconds(1000) / TARGET_FRAMERATE / speed_up;
         auto next_iteration_time = std::chrono::system_clock::now() + iteration_delay;
+        std::cout << "phisics_loop running" << std::endl;
 
         while (not stop_flag)
         {
@@ -565,17 +565,14 @@ public:
 int main()
 {
     sf::RenderWindow window(sf::VideoMode(WINDOW_X, WINDOW_Y), "ball collision demo");
-    window.setFramerateLimit(target_framerate);
+    window.setFramerateLimit(TARGET_FRAMERATE);
 
     Simulation sim;
     sim.init();
-    
-    bool run_async = false;
-    run_async = true;
 
     std::thread physics_thread;
 
-    if (run_async)
+    if (ASYNC_PHYS)
     {
         physics_thread = std::thread(([&sim] {sim.phisics_loop(); }));
     }
@@ -617,7 +614,7 @@ int main()
 
         std::vector<sf::CircleShape> gballs;
 
-        if (run_async)
+        if (ASYNC_PHYS)
         {
             // get data to render from phisics thread;
             {

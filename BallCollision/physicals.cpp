@@ -29,7 +29,7 @@ bool Ball::is_touching(const Physical* other) const
     const Ball* other_as_ball = dynamic_cast<const Ball*>(other);
     if (other_as_ball != nullptr)
     {
-        return are_touching(*other_as_ball, *this);
+        return are_touching(*this, *other_as_ball);
     }
     throw std::logic_error("Not implemented");
 }

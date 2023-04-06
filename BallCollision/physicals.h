@@ -27,8 +27,8 @@ private:
 
 struct Reaction
 {
-    sf::Vector2f velocity_delta = { 0, 0 };
-    sf::Vector2f position_delta = { 0, 0 };
+    sf::Vector2f velocity = { 0, 0 };
+    sf::Vector2f corrected_position = { 0, 0 };
 };
 
 class Ball : public Physical
@@ -68,7 +68,7 @@ public:
         return speed * dir;
     }
 
-    sf::Vector2f impulse() const
+    sf::Vector2f momentum() const
     {
         return velocity() * mass();
     }
@@ -146,10 +146,10 @@ public:
 //    return pr + a;
 //}
 
-static sf::Vector2f project(const sf::Vector2f& a, const sf::Vector2f& b)
-{
-    return dot(a, b) / norm(b) * normalized(b);
-}
+//static sf::Vector2f project(const sf::Vector2f& a, const sf::Vector2f& b)
+//{
+//    return dot(a, b) / norm(b) * normalized(b);
+//}
 
 //static float dist(const Line& l, const sf::Vector2f& p)
 //{
