@@ -1,9 +1,8 @@
 #pragma once
-#include <cstdint>
 #include <SFML/System/Vector2.hpp>
 #include <vector>
-#include "vector_math.h"
 #include <iostream>
+#include "vector_math.h"
 
 class Physical
 {
@@ -39,82 +38,28 @@ public:
     float R = 0;
     float speed = 0;
     sf::Color color = sf::Color::White;
-    std::vector<Reaction> reactions = {};
 
     Ball() : Physical() {};
 
-    Ball(const Ball& other) : Physical()
-    {
-        this->p = other.p;
-        this->dir = other.dir;
-        this->R = other.R;
-        this->speed = other.speed;
-        this->color = other.color;
-        this->reactions = other.reactions;
-    }
+    Ball(const Ball& other);
 
-    virtual ~Ball()
-    {
-
-    }
-
-    float mass() const
-    {
-        return R * R * R; // consider mass to be a function of volume just to make interactions a little bit easier to perceive and comprehend
-    }
-
-    sf::Vector2f velocity() const
-    {
-        return speed * dir;
-    }
-
-    sf::Vector2f momentum() const
-    {
-        return velocity() * mass();
-    }
-
-    double Energy()
-    {
-        return std::pow(1. * norm(velocity()), 2) * mass() / 2;
-    }
+    virtual ~Ball() {};
 
     bool is_touching(const Physical* other) const override;
+
     void mark_colliding(bool is_colliding) override;
     void handle_collision(Physical* other) override;
+
+    float mass() const;
+    sf::Vector2f velocity() const;
+    sf::Vector2f momentum() const;
+    double energy() const;
+
+    bool test_and_handle_wall_collision(int left, int top, int right, int bottom);
     void apply_reactions();
 
-    bool test_wall_collision(int left, int top, int right, int bottom)
-    {
-        bool collided = false;
-
-        if (p.x - R < left)
-        {
-            dir.x *= -1;
-            p.x = left + R;
-            collided = true;
-        }
-        else if (p.x + R > right)
-        {
-            dir.x *= -1;
-            p.x = right - R;
-            collided = true;
-        }
-
-        if (p.y - R < top)
-        {
-            dir.y *= -1;
-            p.y = top + R;
-            collided = true;
-        }
-        else if (p.y + R > bottom)
-        {
-            dir.y *= -1;
-            p.y = bottom - R;
-            collided = true;
-        }
-
-        return collided;
-    }
+private:
+    std::vector<Reaction> reactions = {};
 };
 
 

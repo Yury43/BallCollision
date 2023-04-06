@@ -1,28 +1,20 @@
-#include "SFML/Graphics.hpp"
-#include "MiddleAverageFilter.h"
 #include <iostream>
 #include <unordered_set>
 #include <unordered_map>
 #include <functional>
 #include <mutex>
 #include <assert.h>
-#include "vector_math.h"
+#include <iomanip>
+#include "SFML/Graphics.hpp"
+#include "MiddleAverageFilter.h"
+#include "collision.h"
 #include "physicals.h"
 #include "disjoined_set_union.h"
-#include <iomanip>
+#include "constants.h"
+#include "scenarios.h"
 
 
-constexpr int WINDOW_X = 1024;
-constexpr int WINDOW_Y = 768;
-//constexpr int WINDOW_Y = 1024;
-constexpr int MAX_BALLS = 300;
-constexpr int MIN_BALLS = 100;
-constexpr float M_PI = 3.1415926;
-constexpr int TARGET_FRAMERATE = 60;
-//constexpr bool ASYNC_PHYS = false; // run simulation is the same thread as the window 
-constexpr bool ASYNC_PHYS = true; // run simulation in a thread separate from the window 
-//constexpr bool MOVE_BEFORE_COLLISION = false; // Update positions after searching for collisions to render state preceding collision of next iteration 
-constexpr bool MOVE_BEFORE_COLLISION = true; // Update positions before searching for collisions to account for current positions results in a more accurate sim 
+
 
 
 // TODO to prevent fast balls from escaping and for more accurate model in general one should consider positions on the next tick instead of current one
@@ -60,253 +52,12 @@ void draw_fps(sf::RenderWindow& window, float fps)
 }
 
 
-class Collision
-    {
-
-public:
-
-    const uint64_t cid;
-
-    Collision(
-        const std::shared_ptr<Physical> & p1,
-        const std::shared_ptr<Physical> & p2)
-        : party1(p1), party2(p2), cid(make_id(p1, p2))
-    {
-        
-    }
-
-    bool are_touching() const 
-    {
-        return party1->is_touching(party2.get());
-    }
-
-    void handle()
-    {
-        return party1->handle_collision(party2.get());
-    }
-
-    void mark_started() const
-    {
-        party1->mark_colliding(true);
-        party2->mark_colliding(true);
-    }
-
-    void mark_finished() const
-    {
-        party1->mark_colliding(false);
-        party2->mark_colliding(false);
-    }
-
-private:
-    std::shared_ptr<Physical> party1;
-    std::shared_ptr<Physical> party2;
-
-    static uint64_t make_id(const std::shared_ptr<Physical> & p1, const std::shared_ptr<Physical> & p2)
-    {
-        int high = p1->id;
-        int low = p2->id;
-
-        if (high > low) // make collisions of same objects identical 
-        {
-            std::swap(low, high);
-        }
-
-        return (((uint64_t)high) << 32) | ((uint64_t)low);
-    }
-};
-
-namespace std 
-{
-    template <>
-    struct hash<Collision>
-    {
-        std::size_t operator()(const Collision& c) const
-        {
-            return c.cid;
-        }
-    };
-}
-
-bool operator == (const Collision & left, const Collision& right)
-{
-    return left.cid == right.cid;
-}
-
-
 std::atomic_bool stop_flag = false;
 std::vector<sf::CircleShape> render_buffer;
 std::mutex render_buffer_mutex;
 
 class Simulation
 {
-    std::vector<std::shared_ptr<Ball>> balls;
-    std::unordered_map<int, std::shared_ptr<Ball>> balls_by_id;
-    float max_r;
-    double total_energy_prev = -1;
-    double initial_enery = -1;
-
-    // randomly initialize balls
-    void init_random(std::vector<std::shared_ptr<Ball>>& balls)
-    {
-        srand(time(NULL));
-
-        for (int i = 0; i < (rand() % (MAX_BALLS - MIN_BALLS) + MIN_BALLS); i++)
-            //for (int i = 0; i < 1; i++)
-        {
-            balls.push_back(std::make_shared<Ball>());
-
-            int r = 5 + rand() % 5;
-            balls.back()->R = r;
-            balls.back()->p.x = (r + rand()) % (WINDOW_X - r); // make sure balls dont spawn on the edges 
-            balls.back()->p.y = (r + rand()) % (WINDOW_Y - r);
-            balls.back()->dir.x = (-5.f + (rand() % 10)) / 3.;
-            balls.back()->dir.y = (-5.f + (rand() % 10)) / 3.;
-            balls.back()->speed = (30.f + rand() % 30) * 1;
-        }
-    }
-
-    void init_corner_bounce(std::vector<std::shared_ptr<Ball>>& balls)
-    {
-        Ball ball;
-
-        ball.R = 20;
-        ball.p.x = 100;
-        ball.p.y = 100;
-        ball.dir.x = -1;
-        ball.dir.y = -1;
-        ball.speed = 500;
-
-        balls.push_back(std::make_shared<Ball>(ball));
-
-        ball.p.x = 300;
-        ball.p.y = 300;
-        ball.dir.x = 1;
-        ball.dir.y = 1;
-
-        balls.push_back(std::make_shared<Ball>(ball));
-    }
-
-    void init_chain(std::vector<std::shared_ptr<Ball>>& balls)
-    {
-        float R = 20;
-
-        Ball ball;
-
-        ball.R = R;
-        ball.p.x = 100;
-        ball.p.y = 100;
-        ball.dir.x = -1;
-        ball.dir.y = 0;
-        ball.speed = 500;
-        balls.push_back(std::make_shared<Ball>(ball));
-
-        ball.p.x += 2 * R;
-        ball.dir.x = 0;
-        ball.speed = 0;
-        balls.push_back(std::make_shared<Ball>(ball));
-
-        ball.p.x += 2 * R;
-        balls.push_back(std::make_shared<Ball>(ball));
-
-        ball.p.x += 2 * R;
-        balls.push_back(std::make_shared<Ball>(ball));
-    }
-
-    void init_snooker(std::vector<std::shared_ptr<Ball>>& balls)
-    {
-        float R = 20;
-
-        Ball ball;
-
-        // 0
-        ball.R = R;
-        ball.p.x = WINDOW_X - R - 1;
-        ball.p.y = WINDOW_Y / 2;
-        ball.dir.x = -1;
-        ball.dir.y = 0;
-        ball.speed = 500;
-        balls.push_back(std::make_shared<Ball>(ball));
-
-        //1 
-        ball.p.x = WINDOW_X / 2;
-        ball.p.y = WINDOW_Y / 2;
-        ball.dir.x = 0;
-        ball.speed = 0;
-        balls.push_back(std::make_shared<Ball>(ball));
-
-        for (int j = 2; j <= 5; ++j)
-        {
-            int sign = j % 2 == 0 ? 1 : -1;
-
-            ball.p.x -= R * 2 * std::cos(M_PI / 6);
-            ball.p.y += R * 3 * sign;
-
-            for (int i = 0; i < j; ++i)
-            {
-                ball.p.y -= R * 2 * sign;
-                balls.push_back(std::make_shared<Ball>(ball));
-            }
-        }
-
-        for (auto& ball : balls)
-        {
-            ball->R += 0.001 * (4 - rand() % 5);
-        }
-
-    }
-
-    void init_angled1(std::vector<std::shared_ptr<Ball>>& balls)
-    {
-        float R = 20;
-
-        Ball ball;
-
-        ball.R = R;
-        ball.p.x = WINDOW_X - R - 1;
-        ball.p.y = WINDOW_Y / 2;
-        ball.dir.x = -1;
-        ball.dir.y = 0;
-        ball.speed = 250;
-        balls.push_back(std::make_shared<Ball>(ball));
-
-        ball.p.x = WINDOW_X / 2;
-        ball.p.y = WINDOW_Y / 2;
-        ball.p.y += R;
-        ball.dir.x = 0;
-        ball.speed = 0;
-        balls.push_back(std::make_shared<Ball>(ball));
-    }
-
-    void init_angled2(std::vector<std::shared_ptr<Ball>>& balls)
-    {
-        float R = 20;
-
-        Ball ball;
-
-        ball.R = R;
-        ball.p.x = WINDOW_X - R - 1;
-        ball.p.y = WINDOW_Y / 2;
-        ball.dir.x = -1;
-        ball.dir.y = 0;
-        ball.speed = 250;
-        balls.push_back(std::make_shared<Ball>(ball));
-
-        ball.p.x = WINDOW_X / 2;
-        ball.p.y = WINDOW_Y / 2;
-        ball.p.y -= R * 1.5;
-        ball.dir.x = 0;
-        ball.speed = 0;
-        balls.push_back(std::make_shared<Ball>(ball));
-    }
-
-
-    void move_balls(float deltaTime)
-    {
-        for (auto& ball : balls)
-        {
-            move_ball(*ball, deltaTime);
-        }
-    }
 
 public:
     void init()
@@ -376,7 +127,7 @@ public:
             {
                 // Test and handle collision with walls 
                 // Wall collisions have higher priority 
-                if (ball->test_wall_collision(0, 0, WINDOW_X, WINDOW_Y))
+                if (ball->test_and_handle_wall_collision(0, 0, WINDOW_X, WINDOW_Y))
                 {
                     continue;
                 }
@@ -460,11 +211,9 @@ public:
                 // Calculate total kinetic energy change to control accuracy of simulation 
 
                 float total_energy = std::accumulate(balls.begin(), balls.end(), 0., [](float sum, const auto& ball) {
-                    return sum + ball->Energy();
+                    return sum + ball->energy();
                     //return sum + norm(ball->velocity()); 
                     });
-
-                
 
                 if (initial_enery < 0)
                 {
@@ -534,6 +283,22 @@ public:
         }
 
         std::cout << "phisics_loop done" << std::endl;
+    }
+
+private:
+
+    std::vector<std::shared_ptr<Ball>> balls;
+    std::unordered_map<int, std::shared_ptr<Ball>> balls_by_id;
+    float max_r = 0;
+    double total_energy_prev = -1;
+    double initial_enery = -1;
+
+    void move_balls(float deltaTime)
+    {
+        for (auto& ball : balls)
+        {
+            move_ball(*ball, deltaTime);
+        }
     }
 };
 
