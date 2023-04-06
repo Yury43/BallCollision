@@ -2,10 +2,12 @@
 #include "SFML/Graphics.hpp"
 #include <numeric>
 
+
 inline float dot(const sf::Vector2f& a, const sf::Vector2f& b)
 {
     return a.x * b.x + a.y * b.y;
 }
+
 
 //inline float det(const sf::Vector2f& a, const sf::Vector2f& b)
 //{
@@ -14,7 +16,7 @@ inline float dot(const sf::Vector2f& a, const sf::Vector2f& b)
 
 inline float norm(const sf::Vector2f& a)
 {
-    return std::sqrt(dot(a, a));
+    return std::sqrtf(dot(a, a));
 }
 
 inline float dist(const sf::Vector2f& a, const sf::Vector2f& b)
@@ -24,8 +26,7 @@ inline float dist(const sf::Vector2f& a, const sf::Vector2f& b)
 
 inline sf::Vector2f normalized(const sf::Vector2f& a)
 {
-    float a_norm = norm(a);
-    return a_norm > 1e-6 ? a / a_norm : a / 1.f;
+    return a / std::max(norm(a), 1e-5f);
 }
 
 //inline float angle(const sf::Vector2f& a, const sf::Vector2f& b)

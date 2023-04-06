@@ -17,8 +17,8 @@ constexpr int MAX_BALLS = 300;
 constexpr int MIN_BALLS = 100;
 constexpr float M_PI = 3.1415926;
 constexpr int TARGET_FRAMERATE = 60;
-//constexpr bool ASYNC_PHYS = false;
-constexpr bool ASYNC_PHYS = true;
+//constexpr bool ASYNC_PHYS = false; // run simulation is the same thread as the window 
+constexpr bool ASYNC_PHYS = true; // run simulation in a thread separate from the window 
 //constexpr bool MOVE_BEFORE_COLLISION = false; // Update positions after searching for collisions to render state preceding collision of next iteration 
 constexpr bool MOVE_BEFORE_COLLISION = true; // Update positions before searching for collisions to account for current positions results in a more accurate sim 
 
@@ -255,7 +255,7 @@ class Simulation
 
     }
 
-    void init_angled(std::vector<std::shared_ptr<Ball>>& balls)
+    void init_angled1(std::vector<std::shared_ptr<Ball>>& balls)
     {
         float R = 20;
 
@@ -269,35 +269,34 @@ class Simulation
         ball.speed = 250;
         balls.push_back(std::make_shared<Ball>(ball));
 
+        ball.p.x = WINDOW_X / 2;
+        ball.p.y = WINDOW_Y / 2;
+        ball.p.y += R;
+        ball.dir.x = 0;
+        ball.speed = 0;
+        balls.push_back(std::make_shared<Ball>(ball));
+    }
+
+    void init_angled2(std::vector<std::shared_ptr<Ball>>& balls)
+    {
+        float R = 20;
+
+        Ball ball;
+
+        ball.R = R;
+        ball.p.x = WINDOW_X - R - 1;
+        ball.p.y = WINDOW_Y / 2;
+        ball.dir.x = -1;
+        ball.dir.y = 0;
+        ball.speed = 250;
+        balls.push_back(std::make_shared<Ball>(ball));
 
         ball.p.x = WINDOW_X / 2;
         ball.p.y = WINDOW_Y / 2;
+        ball.p.y -= R * 1.5;
         ball.dir.x = 0;
         ball.speed = 0;
-        //balls.push_back(std::make_shared<Ball>(ball));
-
-        ball.p.x -= R * 2 * std::cos(M_PI / 6);
-        ball.p.y += R;
         balls.push_back(std::make_shared<Ball>(ball));
-
-        //ball.p.y -= R * 2;
-        //balls.push_back(std::make_shared<Ball>(ball));
-
-        //ball.p.x -= R * 2 * std::cos(M_PI / 6);
-        //ball.p.y -= R;
-        //balls.push_back(std::make_shared<Ball>(ball));
-
-        //ball.p.y += R * 2;
-        //balls.push_back(std::make_shared<Ball>(ball));
-
-        //ball.p.y += R * 2;
-        //balls.push_back(std::make_shared<Ball>(ball));
-
-        //for (auto& ball : balls)
-        //{
-        //    ball->R += 0.001 * (4 - rand() % 5);
-        //}
-
     }
 
 
@@ -312,11 +311,12 @@ class Simulation
 public:
     void init()
     {
-        init_random(balls);
+        //init_random(balls);
         //init_corner_bounce(balls);
         //init_chain(balls);
-        //init_snooker(balls);
-        //init_angled(balls);
+        init_snooker(balls);
+        //init_angled1(balls);
+        //init_angled2(balls);
         
         for (const auto& ball : balls)
         {
@@ -419,7 +419,6 @@ public:
                             if (!ball->is_touching(other_ball.get()))
                                 continue;
 
-
                             colliding_pairs.push_back({ ball->id, other_ball->id });
                         }
                     }
@@ -499,7 +498,7 @@ public:
             {
                 float dE = total_energy - total_energy_prev;
                 int dEp = dE / total_energy_prev * 100;
-                if (dE > 1e-3)
+                if (std::abs(dE) > 1e-3)
                 {
                     std::cout << "dE " << dEp << " %" << std::endl;
                 }
@@ -559,9 +558,6 @@ public:
 
 
 
-
-
-
 int main()
 {
     sf::RenderWindow window(sf::VideoMode(WINDOW_X, WINDOW_Y), "ball collision demo");
@@ -577,7 +573,6 @@ int main()
         physics_thread = std::thread(([&sim] {sim.phisics_loop(); }));
     }
     
-
     sf::Clock clock;
     float lastime = clock.restart().asSeconds();
     Math::MiddleAverageFilter<float, 100> fpscounter;
@@ -600,8 +595,6 @@ int main()
         float simDeltaTime = deltaTime - (poll_end - poll_start);
         fpscounter.push(1.0f / (current_time - lastime));
         lastime = current_time;
-
-
 
         /// <summary>
         /// TODO: PLACE COLLISION CODE HERE 
@@ -642,7 +635,11 @@ int main()
     }
 
     stop_flag = true;
-    physics_thread.join();
+    
+    if (physics_thread.joinable())
+    {
+        physics_thread.join();
+    }
 
     return 0;
 }
