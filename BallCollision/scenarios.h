@@ -164,3 +164,25 @@ inline void init_angled2(std::vector<std::shared_ptr<Ball>>& balls)
     ball.speed = 0;
     balls.push_back(std::make_shared<Ball>(ball));
 }
+
+inline void init_size(std::vector<std::shared_ptr<Ball>>& balls)
+{
+    float R = 20;
+
+    Ball ball;
+
+    ball.R = R;
+    ball.p.x = 1.f * WINDOW_X - R - 1;
+    ball.p.y = 1.f * WINDOW_Y / 2;
+    ball.dir.x = -1;
+    ball.dir.y = 0;
+    ball.speed = 250;
+    balls.push_back(std::make_shared<Ball>(ball));
+
+    ball.R = R * 2;
+    ball.p.x = 1.f * 0 + ball.R + 1;
+    ball.p.y = 1.f * WINDOW_Y / 2;
+    ball.dir.x = 1;
+    ball.speed = 250;
+    balls.push_back(std::make_shared<Ball>(ball));
+}
