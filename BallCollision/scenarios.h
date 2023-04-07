@@ -7,6 +7,7 @@
 #include "constants.h"
 #include "randgen.h"
 
+// Different testing scenarios 
 
 // randomly initialize balls
 inline void init_random(std::vector<std::shared_ptr<Ball>>& balls)

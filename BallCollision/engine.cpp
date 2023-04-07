@@ -16,10 +16,10 @@ sf::CircleShape ball_as_shape(const Ball& ball)
 
 Engine::Engine()
 {
-    init_random(balls);
+    // init_random(balls);
     //init_corner_bounce(balls);
-    //init_chain(balls);
-    // init_snooker(balls);
+    // init_chain(balls);
+    init_snooker(balls);
     //init_angled1(balls);
     //init_angled2(balls);
 
@@ -33,11 +33,16 @@ Engine::Engine()
 
 std::vector<sf::CircleShape> Engine::run_iteration(const float delta_time)
 {
+    if (balls.empty())
+    {
+        return {};
+    }
+    
     if (MOVE_BEFORE_COLLISION)
     {
         move_balls(delta_time);
     }
-
+    
     // Reduce time complexity by placing balls in a grid of bins, only balls in the same bin and its neighbors may interact
 
     float bin_size = max_r * 2;
@@ -135,16 +140,36 @@ std::vector<sf::CircleShape> Engine::run_iteration(const float delta_time)
 
         std::vector<Collision> new_collisions;
 
-        for (std::pair<const int, std::vector<int>>& collision_set : colliding_sets.sets_by_parent())
+        // if (false)
+        if (true)
         {
-            int selected_pair_id = collision_set.second[rand_gen() % collision_set.second.size()];
-            std::pair<int, int> selected_pair = colliding_pairs[selected_pair_id];
+            for (std::pair<const int, std::vector<int>>& collision_set : colliding_sets.sets_by_parent())
+            {
+                int selected_pair_id = collision_set.second[rand_gen() % collision_set.second.size()];
+            
+                std::pair<int, int> selected_pair = colliding_pairs[selected_pair_id];
 
-            new_collisions.push_back(Collision(
-                balls_by_id[selected_pair.first],
-                balls_by_id[selected_pair.second]
-            ));
+                new_collisions.push_back(Collision(
+                    balls_by_id[selected_pair.first],
+                    balls_by_id[selected_pair.second]
+                ));
+            }
         }
+        else
+        {
+            for (std::pair<const int, std::vector<int>>& collision_set : colliding_sets.sets_by_parent())
+            {
+                for (int selected_pair_id : collision_set.second)
+                {
+                    std::pair<int, int> selected_pair = colliding_pairs[selected_pair_id];
+                    new_collisions.push_back(Collision(
+                        balls_by_id[selected_pair.first],
+                        balls_by_id[selected_pair.second]
+                    ));
+                }
+            }
+        }
+
 
 
         // Process new collisions and mark them accordingly 
@@ -161,7 +186,7 @@ std::vector<sf::CircleShape> Engine::run_iteration(const float delta_time)
         }
 
 
-        if (false)
+        // if (false)
         {
             // Calculate total kinetic energy change to control accuracy of simulation 
 

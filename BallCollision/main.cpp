@@ -24,12 +24,18 @@ int main()
     window.setFramerateLimit(TARGET_FRAMERATE);
 
     EngineWorker sim(ASYNC_PHYS);
-    sim.run();
+
+    // sim.run();
     
     sf::Clock clock;
     float last_time = clock.restart().asSeconds();
     Math::MiddleAverageFilter<float, 100> fps_counter;
 
+    if (!sim.is_running())
+    {
+        std::cout << "PRESS SPACE TO START" << std::endl;
+    }
+    
     while (window.isOpen())
     {
         sf::Event event;
@@ -41,26 +47,37 @@ int main()
             {
                 window.close();
             }
+            else if (event.key.code == sf::Keyboard::Space)
+            {
+                if (!sim.is_running())
+                {
+                    sim.run();
+                }
+            }
         }
         float poll_end = clock.getElapsedTime().asSeconds();
 
         float current_time = clock.getElapsedTime().asSeconds();
-        float deltaTime = (current_time - last_time);
+        float deltaTime = current_time - last_time;
         float simDeltaTime = deltaTime - (poll_end - poll_start);
         fps_counter.push(1.0f / (current_time - last_time));
         last_time = current_time;
 
 
-        std::vector<sf::CircleShape> shapes = sim.get_update(simDeltaTime);
-
-        if (!shapes.empty())
+        if (sim.is_running())
         {
-            window.clear();
-            for (const auto& shape : shapes)
+            std::vector<sf::CircleShape> shapes = sim.get_update(simDeltaTime);
+
+            if (!shapes.empty())
             {
-                window.draw(shape);
+                window.clear();
+                for (const auto& shape : shapes)
+                {
+                    window.draw(shape);
+                }
             }
         }
+        
 
         draw_fps(window, fps_counter.getAverage());
         window.display();

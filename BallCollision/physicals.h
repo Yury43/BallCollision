@@ -4,6 +4,7 @@
 #include <vector>
 #include "vector_math.h"
 
+// Abstract physical object parenting Ball and (previously) Line 
 
 class Physical
 {
@@ -27,6 +28,7 @@ private:
     static uint32_t next_id;
 };
 
+// The result of collision applied on object 
 struct Reaction
 {
     sf::Vector2f velocity = { 0, 0 };

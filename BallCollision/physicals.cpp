@@ -53,22 +53,21 @@ void Ball::apply_reactions()
         std::cout << "reactions: " << reactions.size() << std::endl;
     }
 
-    assert(reactions.size() == 1);
-
-    Reaction reaction = reactions.front();
-
-    //std::for_each(reactions.begin(), reactions.end(), [&dp](const Reaction& item) {dp += item.impulse_delta; });
-    //dp /= static_cast<float>(reactions.size()); // this doesnt make sense, the resulting impulse could be averaged, but delta should be summed 
-    //std::for_each(reactions.begin(), reactions.end(), [&dr](const Reaction& item) {dr += item.position_delta; });
-    //dr /= static_cast<float>(reactions.size()); // this doesnt make sense, the resulting position could be averaged, but delta should be summed 
-
-    //std::cout << "dp: " << dp << " ; dr: " << dr << std::endl;
+    sf::Vector2f v2(0, 0);
+    sf::Vector2f r2(0, 0);
+    float n_reactions = static_cast<float>(reactions.size());
+    
+    std::for_each(reactions.begin(), reactions.end(), [&v2](const Reaction& item) {v2 += item.velocity; });
+    v2 /= n_reactions;
+    
+    std::for_each(reactions.begin(), reactions.end(), [&r2](const Reaction& item) {r2 += item.corrected_position; });
+    r2 /= n_reactions;  
 
     reactions.clear();
 
-    p = reaction.corrected_position;
-    speed = norm(reaction.velocity);
-    dir = normalized(reaction.velocity);
+    p = r2;
+    speed = norm(v2);
+    dir = normalized(v2);
 }
 
 void Ball::handle_collision(Physical* other)
@@ -107,8 +106,8 @@ void Ball::handle_collision(Physical* other)
         auto r12 = r1 - r2;
         auto r21 = -r12;
 
-        auto dv1 = v1 - (m1 * 2 / (m1 + m2)) * dot(v1 - v2, r12) / std::powf(norm(r12), 2) * r12;
-        auto dv2 = v2 - (m2 * 2 / (m1 + m2)) * dot(v2 - v1, r21) / std::powf(norm(r21), 2) * r21;
+        auto dv1 = v1 - m1 * 2 / (m1 + m2) * dot(v1 - v2, r12) / std::powf(norm(r12), 2) * r12;
+        auto dv2 = v2 - m2 * 2 / (m1 + m2) * dot(v2 - v1, r21) / std::powf(norm(r21), 2) * r21;
 
         if (norm(dv1) > 1e-5f || norm(dr1) > DELTA)
         {

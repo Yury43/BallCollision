@@ -7,6 +7,8 @@
 #include <mutex>
 #include "engine.h"
 
+// Manages the flow of simulation in synchronous or parallel mode  
+
 class EngineWorker
 {
 public:
@@ -19,8 +21,9 @@ public:
     EngineWorker operator =(const EngineWorker && _) = delete;
     
     ~EngineWorker();
-    void engine_loop();
     void run();
+    bool is_running() const {return !async_mode || run_flag;}
+    
     std::vector<sf::CircleShape> get_update(float sim_delta_time);
 
 private:
@@ -33,5 +36,6 @@ private:
     std::vector<sf::CircleShape> render_buffer;
     std::mutex render_buffer_mutex;
 
+    void engine_loop();
 };
 

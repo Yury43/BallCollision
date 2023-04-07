@@ -1,5 +1,6 @@
 #include "collision.h"
 
+
 Collision::Collision(
     const std::shared_ptr<Physical>& p1,
     const std::shared_ptr<Physical>& p2)

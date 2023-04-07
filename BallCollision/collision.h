@@ -2,6 +2,8 @@
 
 #include "physicals.h"
 
+// Collision class considers and handles system of colliding objects as a whole
+
 class Collision
 {
 public:
@@ -22,6 +24,8 @@ private:
 
     static uint64_t make_id(const std::shared_ptr<Physical>& p1, const std::shared_ptr<Physical>& p2);
 };
+
+// support for std::unordered_* containers 
 
 namespace std
 {
