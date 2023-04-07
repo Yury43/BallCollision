@@ -202,8 +202,8 @@ std::vector<sf::CircleShape> Engine::run_iteration(const float delta_time)
 
             if (total_energy_prev > 0)
             {
-                float dE = total_energy - total_energy_prev;
-                float dEp = dE / total_energy_prev * 100;
+                double dE = total_energy - total_energy_prev;
+                double dEp = dE / total_energy_prev * 100;
                 if (std::abs(dE) > 1e-1)
                 {
                     //std::cout << std::showpos << std::fixed << std::setprecision(0) <<  << std::endl;
