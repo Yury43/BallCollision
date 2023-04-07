@@ -22,7 +22,6 @@ private:
     std::vector<std::shared_ptr<Ball>> balls;
     std::unordered_map<uint32_t, std::shared_ptr<Ball>> balls_by_id;
     
-    float max_span = 0; // for grid separation 
     double total_energy_prev = -1; // kinetic energy for accuracy validation 
     double initial_energy = -1;
     

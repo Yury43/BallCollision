@@ -1,11 +1,15 @@
 #include <iostream>
 #include <iomanip>
+#include <array>
+#include <unordered_set>
 #include "engine.h"
 
-#include "bin_grid.h"
+#include <cassert>
+
 #include "scenarios.h"
 #include "disjoined_set_union.h"
 #include "collision.h"
+#include "collision_detector.h"
 
 sf::CircleShape ball_as_shape(const Ball& ball)
 {
@@ -18,20 +22,22 @@ sf::CircleShape ball_as_shape(const Ball& ball)
 
 Engine::Engine()
 {
-    // init_random(balls);
+    init_random(balls);
+    // init_snooker(balls);
+    
     //init_corner_bounce(balls);
     // init_chain(balls);
-    init_snooker(balls);
-    //init_angled1(balls);
-    //init_angled2(balls);
+    // init_angled1(balls);
+    // init_angled2(balls);
+    // init_size(balls);
 
     for (const auto& ball : balls)
     {
         balls_by_id[ball->id] = ball;
     }
-
-    max_span = balls.empty() ? 0 : (*std::max_element(balls.begin(), balls.end(), [](const auto& a, const auto& b) { return a->R < b->R; }))->R;
 }
+
+
 
 
 std::vector<sf::CircleShape> Engine::run_iteration(const float delta_time)
@@ -48,12 +54,17 @@ std::vector<sf::CircleShape> Engine::run_iteration(const float delta_time)
     
     // Reduce time complexity by placing balls in a grid of bins, only balls in the same bin and its neighbors may interact
 
-
     {
-        BinGrid<Ball> grid(max_span, balls);
+        std::shared_ptr<CollisionDetector> collision_detector;
+        
+        // collision_detector = std::make_shared<OnlineQuadTree>();
+        collision_detector = std::make_shared<OfflineQuadTree>(balls);
+        // collision_detector = std::make_shared<BinGrid<Ball>>(balls);
         
         std::vector<std::pair<int, int>> colliding_pairs;
 
+        int collision_test_count = 0;
+        
         for (const auto& ball : balls)
         {
             // Test and handle collision with walls 
@@ -65,9 +76,11 @@ std::vector<sf::CircleShape> Engine::run_iteration(const float delta_time)
 
             // Test collision with other balls in bins 
 
-            grid.detect_collisions(ball, colliding_pairs);
+            collision_detector->detect_collisions(ball, colliding_pairs, &collision_test_count);
         }
-
+        
+        // std::cout << "collision_test_count: " << collision_test_count << " / " << balls.size() * balls.size() << std::endl;
+        
         // Find collisions involving same balls 
 
         const int n_colliding_pairs = static_cast<int>(colliding_pairs.size());
@@ -90,6 +103,7 @@ std::vector<sf::CircleShape> Engine::run_iteration(const float delta_time)
         // If collision involves more than 2 balls, chose single pair randomly, leave others for later 
 
         std::vector<Collision> new_collisions;
+        
 
         // if (false)
         if (true) // schedule single random collision in a system

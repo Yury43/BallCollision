@@ -22,15 +22,18 @@ static bool are_touching(const Ball& b1, const Ball& b2)
 
 bool Ball::is_touching(const Physical* other) const
 {
+    if (other->id == this->id)
+        return false;
+    
     //const Line* other_as_line = dynamic_cast<const Line*>(other);
     //if (other_as_line != nullptr)
     //{
     //    return are_touching(*other_as_line, *this);
     //}
-    auto other_as_ball = dynamic_cast<const Ball*>(other);
-    if (other_as_ball != nullptr)
+    auto other_ball = dynamic_cast<const Ball*>(other);
+    if (other_ball)
     {
-        return are_touching(*this, *other_as_ball);
+        return are_touching(*this, *other_ball);
     }
     throw std::logic_error("Not implemented");
 }
@@ -73,7 +76,7 @@ void Ball::apply_reactions()
 void Ball::handle_collision(Physical* other)
 {
     auto other_ball = dynamic_cast<Ball*>(other);
-    if (other_ball != nullptr)
+    if (other_ball)
     {
         auto r1 = p;
         auto r2 = other_ball->p;

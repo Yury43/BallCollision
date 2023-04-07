@@ -1,6 +1,6 @@
 #pragma once
 
-// #define FIXED_RANDOM_SEED (0)
+#define FIXED_RANDOM_SEED (0)
 
 constexpr int WINDOW_X = 1024;
 constexpr int WINDOW_Y = 768;

@@ -25,7 +25,7 @@ int main()
 
     EngineWorker sim(ASYNC_PHYS);
 
-    // sim.run();
+    sim.run();
     
     sf::Clock clock;
     float last_time = clock.restart().asSeconds();
@@ -45,6 +45,7 @@ int main()
             if (event.type == sf::Event::Closed ||
                 event.key.code == sf::Keyboard::Escape)
             {
+                std::cout << "event.key: " << event.key.code << std::endl;
                 window.close();
             }
             else if (event.key.code == sf::Keyboard::Space)

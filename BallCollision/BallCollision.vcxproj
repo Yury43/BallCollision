@@ -146,14 +146,15 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="collision.cpp" />
+    <ClCompile Include="collision_detector.cpp" />
     <ClCompile Include="engine.cpp" />
     <ClCompile Include="engine_worker.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="physicals.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="bin_grid.h" />
     <ClInclude Include="collision.h" />
+    <ClInclude Include="collision_detector.h" />
     <ClInclude Include="constants.h" />
     <ClInclude Include="disjoined_set_union.h" />
     <ClInclude Include="engine_worker.h" />

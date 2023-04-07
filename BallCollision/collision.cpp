@@ -4,7 +4,7 @@
 Collision::Collision(
     const std::shared_ptr<Physical>& p1,
     const std::shared_ptr<Physical>& p2)
-    : party1(p1), party2(p2), cid(make_id(p1, p2))
+    : cid(make_id(p1, p2)), party1(p1), party2(p2)
 {
 
 }
