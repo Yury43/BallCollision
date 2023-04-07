@@ -152,6 +152,7 @@
     <ClCompile Include="physicals.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="bin_grid.h" />
     <ClInclude Include="collision.h" />
     <ClInclude Include="constants.h" />
     <ClInclude Include="disjoined_set_union.h" />

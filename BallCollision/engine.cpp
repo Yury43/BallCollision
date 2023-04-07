@@ -1,6 +1,8 @@
 #include <iostream>
 #include <iomanip>
 #include "engine.h"
+
+#include "bin_grid.h"
 #include "scenarios.h"
 #include "disjoined_set_union.h"
 #include "collision.h"
@@ -28,8 +30,9 @@ Engine::Engine()
         balls_by_id[ball->id] = ball;
     }
 
-    max_r = balls.empty() ? 0 : (*std::max_element(balls.begin(), balls.end(), [](const auto& a, const auto& b) { return a->R < b->R; }))->R;
+    max_span = balls.empty() ? 0 : (*std::max_element(balls.begin(), balls.end(), [](const auto& a, const auto& b) { return a->R < b->R; }))->R;
 }
+
 
 std::vector<sf::CircleShape> Engine::run_iteration(const float delta_time)
 {
@@ -45,41 +48,10 @@ std::vector<sf::CircleShape> Engine::run_iteration(const float delta_time)
     
     // Reduce time complexity by placing balls in a grid of bins, only balls in the same bin and its neighbors may interact
 
-    float bin_size = max_r * 2;
-    int n_bins_x = static_cast<int>(std::ceil(WINDOW_X / bin_size)) + 2;
-    int n_bins_y = static_cast<int>(std::ceil(WINDOW_Y / bin_size)) + 2;
-
-    using BallBin = std::vector<std::shared_ptr<Ball>>;
-    std::vector<std::vector<BallBin>> bins(n_bins_x, std::vector<BallBin>(n_bins_y));
-
-    auto find_bin_x = [bin_size](const Ball& b) {return static_cast<int>(std::round(b.p.x / bin_size)) + 1; };
-    auto find_bin_y = [bin_size](const Ball& b) {return static_cast<int>(std::round(b.p.y / bin_size)) + 1; };
-    
-    auto out_of_range = [n_bins_x, n_bins_y](const int bin_x, const int bin_y)
-        {return bin_x < 0 or bin_x >= n_bins_x or bin_y < 0 or bin_y >= n_bins_y; };
-
-    // Place balls in bins, delete those that escaped 
-    {
-        auto ball_it = balls.begin();
-        while (ball_it != balls.end())
-        {
-            const int bin_x = find_bin_x(**ball_it);
-            const int bin_y = find_bin_y(**ball_it);
-
-            if (out_of_range(bin_x, bin_y))
-            {
-                std::cout << "Ball " << (*ball_it)->id << " " << (*ball_it)->p << " escaped to [" << bin_x << ", " << bin_y << "] !" << std::endl;
-                ball_it = balls.erase(ball_it);
-            }
-            else
-            {
-                bins[bin_x][bin_y].push_back(*ball_it);
-                ++ball_it;
-            }
-        }
-    }
 
     {
+        BinGrid<Ball> grid(max_span, balls);
+        
         std::vector<std::pair<int, int>> colliding_pairs;
 
         for (const auto& ball : balls)
@@ -93,28 +65,7 @@ std::vector<sf::CircleShape> Engine::run_iteration(const float delta_time)
 
             // Test collision with other balls in bins 
 
-            int bin_x = find_bin_x(*ball);
-            int bin_y = find_bin_y(*ball);
-
-            for (int i = 0; i < 2; ++i)
-            {
-                for (int j = 0; j < 2; ++j)
-                {
-                    if (out_of_range(bin_x + i, bin_y + j))
-                        continue;
-
-                    for (auto& other_ball : bins[bin_x + i][bin_y + j])
-                    {
-                        if (ball->id == other_ball->id)
-                            continue;
-
-                        if (!ball->is_touching(other_ball.get()))
-                            continue;
-
-                        colliding_pairs.push_back({ ball->id, other_ball->id });
-                    }
-                }
-            }
+            grid.detect_collisions(ball, colliding_pairs);
         }
 
         // Find collisions involving same balls 
@@ -141,7 +92,7 @@ std::vector<sf::CircleShape> Engine::run_iteration(const float delta_time)
         std::vector<Collision> new_collisions;
 
         // if (false)
-        if (true)
+        if (true) // schedule single random collision in a system
         {
             for (std::pair<const int, std::vector<int>>& collision_set : colliding_sets.sets_by_parent())
             {
@@ -155,8 +106,9 @@ std::vector<sf::CircleShape> Engine::run_iteration(const float delta_time)
                 ));
             }
         }
-        else
+        else // schedule all collisions
         {
+            
             for (std::pair<const int, std::vector<int>>& collision_set : colliding_sets.sets_by_parent())
             {
                 for (int selected_pair_id : collision_set.second)
@@ -169,8 +121,6 @@ std::vector<sf::CircleShape> Engine::run_iteration(const float delta_time)
                 }
             }
         }
-
-
 
         // Process new collisions and mark them accordingly 
         for (Collision& collision : new_collisions)
@@ -204,7 +154,7 @@ std::vector<sf::CircleShape> Engine::run_iteration(const float delta_time)
             {
                 double dE = total_energy - total_energy_prev;
                 double dEp = dE / total_energy_prev * 100;
-                if (std::abs(dE) > 1e-1)
+                if (std::abs(dEp) > 1e-1)
                 {
                     //std::cout << std::showpos << std::fixed << std::setprecision(0) <<  << std::endl;
                     std::cout << std::fixed << std::setprecision(0)
