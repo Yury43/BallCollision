@@ -15,7 +15,7 @@ protected:
     float calc_max_object_span(const std::vector<std::shared_ptr<T>>& objects)
     {
         return objects.empty() ? 0 :
-        (*std::max_element(objects.begin(), objects.end(), [](const auto& a, const auto& b) { return a->R < b->R; }))->R;
+        (*std::max_element(objects.begin(), objects.end(), [](const auto& a, const auto& b) { return a->span() < b->span(); }))->span();
     }
     
 public:
@@ -23,7 +23,7 @@ public:
     virtual ~CollisionDetector() = default;
     
     virtual void detect_collisions(
-        const std::shared_ptr<Ball> & ball,
+        const std::shared_ptr<Physical> & ball,
         std::vector<std::pair<int, int>> & colliding_pairs,
         int* collision_test_counter = nullptr
     ) = 0;
@@ -143,9 +143,10 @@ struct Quadrant
 class LazyQuadTreeNode
 {
 public:
-    LazyQuadTreeNode(const Quadrant & q);
+    explicit LazyQuadTreeNode(const Quadrant & q);
+    std::shared_ptr<LazyQuadTreeNode> find_next_node(sf::Vector2f loc);
 
-    std::shared_ptr<Ball> push(const std::shared_ptr<Ball> & item);
+    std::shared_ptr<Physical> push(const std::shared_ptr<Physical> & item);
 
     size_t count_nodes() const ;
 
@@ -153,9 +154,9 @@ public:
 
     bool is_leaf() const;
     
-    void collect_proxy(const sf::Vector2f & loc, const float R, std::vector<std::shared_ptr<Ball>> & collection) const;
+    void collect_proxy(const sf::Vector2f & loc, const float R, std::vector<std::shared_ptr<Physical>> & collection) const;
 
-    void collect_proxy(const Quadrant & loc, std::vector<std::shared_ptr<Ball>>& collection) const;
+    void collect_proxy(const Quadrant & loc, std::vector<std::shared_ptr<Physical>>& collection) const;
     
 private:
 
@@ -164,19 +165,19 @@ private:
 
     std::array<std::shared_ptr<LazyQuadTreeNode>, 4> leaves;
 
-    std::shared_ptr<Ball> content;
+    std::shared_ptr<Physical> content;
 };
 
 
 class OfflineQuadTree : public CollisionDetector
 {
 public:
-    explicit  OfflineQuadTree(const std::vector<std::shared_ptr<Ball>> & balls) ;
+    explicit  OfflineQuadTree(const std::vector<std::shared_ptr<Physical>> & objects) ;
 
     ~OfflineQuadTree() override = default;
     
     void detect_collisions(
-        const std::shared_ptr<Ball> & ball,
+        const std::shared_ptr<Physical> & that,
         std::vector<std::pair<int, int>> & colliding_pairs,
         int* collision_test_counter = nullptr
     ) override;
@@ -197,7 +198,7 @@ public:
     ~OnlineQuadTree() override = default;
     
     void detect_collisions(
-        const std::shared_ptr<Ball> & ball,
+        const std::shared_ptr<Physical> & that,
         std::vector<std::pair<int, int>> & colliding_pairs,
         int* collision_test_counter = nullptr
         ) override;

@@ -1,3 +1,4 @@
+#include <cassert>
 #include <iostream>
 
 #include "SFML/Graphics.hpp"
@@ -67,14 +68,15 @@ int main()
 
         if (sim.is_running())
         {
-            std::vector<sf::CircleShape> shapes = sim.get_update(simDeltaTime);
+            std::vector<std::shared_ptr<sf::Shape>> shapes = sim.get_update(simDeltaTime);
 
             if (!shapes.empty())
             {
                 window.clear();
                 for (const auto& shape : shapes)
                 {
-                    window.draw(shape);
+                    assert(shape);
+                    window.draw(*shape);
                 }
             }
         }

@@ -6,11 +6,11 @@
 
 #include "constants.h"
 
-OfflineQuadTree::OfflineQuadTree(const std::vector<std::shared_ptr<Ball>> & balls) :
+OfflineQuadTree::OfflineQuadTree(const std::vector<std::shared_ptr<Physical>> & objects) :
     quad_tree_root({0, 0, WINDOW_X, WINDOW_X}),
-    max_span(calc_max_object_span(balls))
+    max_span(calc_max_object_span(objects))
 {
-    for (const auto & ball : balls)
+    for (const auto & ball : objects)
     {
         if (ball->p.x < 0 || ball->p.x > WINDOW_X || ball->p.y < 0 || ball->p.y > WINDOW_Y)
         {
@@ -20,30 +20,30 @@ OfflineQuadTree::OfflineQuadTree(const std::vector<std::shared_ptr<Ball>> & ball
         quad_tree_root.push(ball);
     }
     
-    assert(balls.size() >= quad_tree_root.count_items());
+    assert(objects.size() >= quad_tree_root.count_items());
 }
     
 void OfflineQuadTree::detect_collisions(
-    const std::shared_ptr<Ball> & ball,
+    const std::shared_ptr<Physical> & that,
     std::vector<std::pair<int, int>> & colliding_pairs,
     int* collision_test_counter
 ) 
 {
-    std::vector<std::shared_ptr<Ball>> proxy;
-    quad_tree_root.collect_proxy(ball->p, max_span * 2, proxy);
+    std::vector<std::shared_ptr<Physical>> proxy;
+    quad_tree_root.collect_proxy(that->p, max_span * 2, proxy);
         
     // std::unordered_set<uint32_t> ids;
     for (const auto & other : proxy)
     {
         // ids.insert(other->id);
-        if (ball->id != other->id)
+        if (that->id != other->id)
         {
             if (collision_test_counter != nullptr)
                 (*collision_test_counter)++;
             
-            if (ball->is_touching(other.get()))
+            if (that->is_touching(other.get()))
             {
-                colliding_pairs.push_back({ ball->id, other->id });
+                colliding_pairs.push_back({ that->id, other->id });
             }    
         }
     }
@@ -57,25 +57,25 @@ OnlineQuadTree::OnlineQuadTree() : quad_tree_root({0, 0, WINDOW_X, WINDOW_X})
 }
 
 void OnlineQuadTree::detect_collisions(
-    const std::shared_ptr<Ball> & ball,
+    const std::shared_ptr<Physical> & that,
     std::vector<std::pair<int, int>> & colliding_pairs,
     int* collision_test_counter
     ) 
 {
-    if (ball->p.x < 0 || ball->p.x > WINDOW_X || ball->p.y < 0 || ball->p.y > WINDOW_Y)
+    if (that->p.x < 0 || that->p.x > WINDOW_X || that->p.y < 0 || that->p.y > WINDOW_Y)
     {
         return;
     }
     
-    std::shared_ptr<Physical> closest = quad_tree_root.push(ball);
+    std::shared_ptr<Physical> closest = quad_tree_root.push(that);
     if (closest)
     {
         if (collision_test_counter != nullptr)
             (*collision_test_counter)++;
         
-        if (ball->is_touching(closest.get()))
+        if (that->is_touching(closest.get()))
         {
-            colliding_pairs.push_back({ ball->id, closest->id });
+            colliding_pairs.push_back({ that->id, closest->id });
         }
     }
 }
@@ -123,7 +123,24 @@ LazyQuadTreeNode::LazyQuadTreeNode(const Quadrant & q_) : quadrant(q_), subquadr
     assert(quadrant.t < quadrant.b);
 }
 
-std::shared_ptr<Ball> LazyQuadTreeNode::push(const std::shared_ptr<Ball> & item)
+std::shared_ptr<LazyQuadTreeNode> LazyQuadTreeNode::find_next_node(const sf::Vector2f loc)
+{
+    float loc_x = loc.x;
+    float loc_y = loc.y;
+
+    for (int i = 0; i < 4; ++i)
+    {
+        if (subquadrants[i].contains(loc_x, loc_y))
+        {
+            if (!leaves[i]) leaves[i] = std::make_shared<LazyQuadTreeNode>(subquadrants[i]);
+            return leaves[i];
+        }
+    }
+        
+    return nullptr;
+}
+
+std::shared_ptr<Physical> LazyQuadTreeNode::push(const std::shared_ptr<Physical> & item)
 {
 
     {
@@ -136,25 +153,11 @@ std::shared_ptr<Ball> LazyQuadTreeNode::push(const std::shared_ptr<Ball> & item)
             return nullptr;
         }
     }
-    
-    auto find_next_node = [=](const sf::Vector2f loc) -> std::shared_ptr<LazyQuadTreeNode>
-    {
-        float loc_x = loc.x;
-        float loc_y = loc.y;
 
-        for (int i = 0; i < 4; ++i)
-        {
-            if (subquadrants[i].contains(loc_x, loc_y))
-            {
-                if (!leaves[i]) leaves[i] = std::make_shared<LazyQuadTreeNode>(subquadrants[i]);
-                    return leaves[i];
-            }
-        }
-    };
     
     if (content)
     {            
-        std::shared_ptr<Ball> closest = content;    
+        std::shared_ptr<Physical> closest = content;    
         content.reset();
         
         find_next_node(closest->p)->push(closest);
@@ -193,14 +196,10 @@ size_t LazyQuadTreeNode::count_items() const
 
 bool LazyQuadTreeNode::is_leaf() const
 {
-    for (const auto & leaf : leaves)
-        if (leaf)
-            return true;
-    
-    return false;
+    return std::any_of(leaves.begin(), leaves.end(), [](const auto & leaf){return leaf;});
 }
 
-void LazyQuadTreeNode::collect_proxy(const sf::Vector2f & loc, const float R, std::vector<std::shared_ptr<Ball>> & collection) const
+void LazyQuadTreeNode::collect_proxy(const sf::Vector2f & loc, const float R, std::vector<std::shared_ptr<Physical>> & collection) const
 {
     collect_proxy(Quadrant{
         loc.x - R,
@@ -211,7 +210,7 @@ void LazyQuadTreeNode::collect_proxy(const sf::Vector2f & loc, const float R, st
 }
 
 
-void LazyQuadTreeNode::collect_proxy(const Quadrant & loc, std::vector<std::shared_ptr<Ball>>& collection) const
+void LazyQuadTreeNode::collect_proxy(const Quadrant & loc, std::vector<std::shared_ptr<Physical>>& collection) const
 {
     if (content)
     {
@@ -221,7 +220,7 @@ void LazyQuadTreeNode::collect_proxy(const Quadrant & loc, std::vector<std::shar
     
     for (int i = 0; i < 4; ++i)
     {
-        Quadrant intersection;
+        Quadrant intersection = {};
         if (subquadrants[i].overlap(loc, intersection))
         {
             if (leaves[i]) leaves[i]->collect_proxy(intersection, collection);

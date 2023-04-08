@@ -59,7 +59,7 @@ void EngineWorker::run()
     }
 }
 
-std::vector<sf::CircleShape> EngineWorker::get_update(const float sim_delta_time)
+std::vector<std::shared_ptr<sf::Shape>> EngineWorker::get_update(const float sim_delta_time)
 {
     if (async_mode)
     {

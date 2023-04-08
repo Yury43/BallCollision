@@ -3,6 +3,8 @@
 #include <iostream>
 #include <cassert>
 #include "physicals.h"
+
+#include "ball.h"
 #include "vector_math.h"
 
 uint32_t Physical::next_id = 0;
@@ -15,10 +17,10 @@ uint32_t Physical::next_id = 0;
 
 constexpr float DELTA = 1e-3f;
 
-static bool are_touching(const Ball& b1, const Ball& b2)
-{
-    return dist(b1.p, b2.p) < b1.R + b2.R + DELTA;
-}
+// static bool are_touching(const Ball& b1, const Ball& b2)
+// {
+//     return b1.is_touching(b2) dist(b1.p, b2.p) < b1.R + b2.R + DELTA;
+// }
 
 bool Ball::is_touching(const Physical* other) const
 {
@@ -33,7 +35,7 @@ bool Ball::is_touching(const Physical* other) const
     auto other_ball = dynamic_cast<const Ball*>(other);
     if (other_ball)
     {
-        return are_touching(*this, *other_ball);
+        return dist(p, other_ball->p) < R + other_ball->R + DELTA;
     }
     throw std::logic_error("Not implemented");
 }
@@ -126,6 +128,22 @@ void Ball::handle_collision(Physical* other)
     }
 
     throw std::logic_error("Not implemented");
+}
+
+void Ball::update_position(const float deltaTime)
+{
+    auto dr = velocity() * deltaTime;
+    p.x += dr.x;
+    p.y += dr.y;
+}
+
+std::shared_ptr<sf::Shape> Ball::get_drawing_shape() 
+{
+    sf::CircleShape shape;
+    shape.setRadius(R);
+    shape.setPosition(p.x - R, p.y - R); // consider ball.p to be the center
+    shape.setFillColor(color);
+    return std::make_shared<sf::CircleShape>(std::move(shape));
 }
 
 Ball::Ball(const Ball& other)
