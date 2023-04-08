@@ -20,7 +20,7 @@ inline void init_random(std::vector<std::shared_ptr<Physical>>& objects)
     {
         Ball ball;
         
-        int r = 5 + rand_gen() % 5;
+        int r = 5 + rand_gen() % 7;
         ball.R = r;
         ball.p.x = (r + rand_gen()) % (WINDOW_X - r); // make sure balls dont spawn on the edges 
         ball.p.y = (r + rand_gen()) % (WINDOW_Y - r);

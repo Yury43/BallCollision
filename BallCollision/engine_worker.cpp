@@ -18,8 +18,8 @@ void EngineWorker::engine_loop()
     using namespace std::chrono_literals;
     sf::Clock clock;
     float last_time = clock.restart().asSeconds();
-    // float speed_up = 4;
-    float speed_up = 8;
+    float speed_up = 4;
+    // float speed_up = 8;
 
     // calculate target iteration delay and next iteration time
     const std::chrono::duration<double, std::micro> iteration_delay = 1000000us / TARGET_FRAMERATE / speed_up;

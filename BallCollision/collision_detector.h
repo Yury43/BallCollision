@@ -143,18 +143,18 @@ struct Quadrant
 class LazyQuadTreeNode
 {
 public:
-    explicit LazyQuadTreeNode(const Quadrant & q);
-    std::shared_ptr<LazyQuadTreeNode> find_next_node(sf::Vector2f loc);
+    explicit LazyQuadTreeNode(const Quadrant & q_);
+    LazyQuadTreeNode* find_next_node(sf::Vector2f loc);
 
-    std::shared_ptr<Physical> push(const std::shared_ptr<Physical> & item);
+    void push(const std::shared_ptr<Physical> & item);
 
     size_t count_nodes() const ;
 
     size_t count_items() const ;
 
-    bool is_leaf() const;
+    // bool has_leaves() const;
     
-    void collect_proxy(const sf::Vector2f & loc, const float R, std::vector<std::shared_ptr<Physical>> & collection) const;
+    void collect_proxy(const sf::Vector2f & loc, float R, std::vector<std::shared_ptr<Physical>> & collection) const;
 
     void collect_proxy(const Quadrant & loc, std::vector<std::shared_ptr<Physical>>& collection) const;
     
@@ -163,18 +163,19 @@ private:
     Quadrant quadrant;
     Subdivision subquadrants;
 
-    std::array<std::shared_ptr<LazyQuadTreeNode>, 4> leaves;
+    std::array<std::unique_ptr<LazyQuadTreeNode>, 4> leaves;
 
     std::shared_ptr<Physical> content;
+    bool has_leaves = false;
 };
 
 
-class OfflineQuadTree : public CollisionDetector
+class QuadTree : public CollisionDetector
 {
 public:
-    explicit  OfflineQuadTree(const std::vector<std::shared_ptr<Physical>> & objects) ;
+    explicit  QuadTree(const std::vector<std::shared_ptr<Physical>> & objects) ;
 
-    ~OfflineQuadTree() override = default;
+    ~QuadTree() override = default;
     
     void detect_collisions(
         const std::shared_ptr<Physical> & that,
@@ -187,23 +188,3 @@ private:
     LazyQuadTreeNode quad_tree_root;
     const float max_span;
 };
-
-
-class OnlineQuadTree : public CollisionDetector
-{
-public:
-
-    OnlineQuadTree();
-
-    ~OnlineQuadTree() override = default;
-    
-    void detect_collisions(
-        const std::shared_ptr<Physical> & that,
-        std::vector<std::pair<int, int>> & colliding_pairs,
-        int* collision_test_counter = nullptr
-        ) override;
-    
-private:
-    LazyQuadTreeNode quad_tree_root;
-};
-
