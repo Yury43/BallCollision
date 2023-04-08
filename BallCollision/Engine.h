@@ -15,7 +15,7 @@ class Engine
 public:
     Engine();
 
-    std::vector<std::shared_ptr<sf::Shape>> run_iteration(float delta_time);
+    std::vector<std::shared_ptr<Physical>> run_iteration(float delta_time);
 
 private:
 
@@ -26,7 +26,6 @@ private:
     double initial_energy = -1;
     
     std::mt19937 rand_gen = RandGen::get(); 
-
-    void move_ball(Physical& ball, float deltaTime);
+    
     void move_objects(float deltaTime); 
 };

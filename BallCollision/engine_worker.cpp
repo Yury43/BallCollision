@@ -1,6 +1,7 @@
 #include <iostream>
 #include "engine_worker.h"
 #include "constants.h"
+#include "profiler.h"
 
 EngineWorker::EngineWorker(const bool async_mode_) : async_mode(async_mode_)
 {
@@ -9,26 +10,26 @@ EngineWorker::EngineWorker(const bool async_mode_) : async_mode(async_mode_)
 
 EngineWorker::~EngineWorker()
 {
-    run_flag = false;
-
-    if (engine_thread.joinable())
-    {
-        engine_thread.join();
-    }
+    stop();
 }
 
 void EngineWorker::engine_loop()
 {
+    using namespace std::chrono_literals;
     sf::Clock clock;
     float last_time = clock.restart().asSeconds();
-    float speed_up = 2;
+    // float speed_up = 4;
+    float speed_up = 8;
+
     // calculate target iteration delay and next iteration time
-    const auto iteration_delay = std::chrono::milliseconds(1000) / TARGET_FRAMERATE / speed_up;
-    auto next_iteration_time = std::chrono::system_clock::now() + iteration_delay;
+    const std::chrono::duration<double, std::micro> iteration_delay = 1000000us / TARGET_FRAMERATE / speed_up;
+    
+    auto next_iteration_time = std::chrono::steady_clock::now() + iteration_delay;
     std::cout << "physics_loop running" << std::endl;
 
     while (run_flag)
     {
+        // PROFILE();
         float current_time = clock.getElapsedTime().asSeconds();
         float deltaTime = (current_time - last_time) * speed_up;
         last_time = current_time;
@@ -41,10 +42,10 @@ void EngineWorker::engine_loop()
             render_buffer = std::move(gballs);
         }
 
-        // Sleep the remaining time, reserved for iteration and calculate time of next iteration 
+        // Sleep the remaining time, reserved for iteration and calculate time of next iteration
+
         std::this_thread::sleep_until(next_iteration_time);
         next_iteration_time = next_iteration_time + iteration_delay;
-
     }
 
     std::cout << "physics_loop done" << std::endl;
@@ -59,7 +60,17 @@ void EngineWorker::run()
     }
 }
 
-std::vector<std::shared_ptr<sf::Shape>> EngineWorker::get_update(const float sim_delta_time)
+void EngineWorker::stop()
+{
+    run_flag = false;
+
+    if (engine_thread.joinable())
+    {
+        engine_thread.join();
+    }
+}
+
+std::vector<std::shared_ptr<Physical>> EngineWorker::get_update(const float sim_delta_time)
 {
     if (async_mode)
     {

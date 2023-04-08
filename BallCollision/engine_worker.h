@@ -22,9 +22,10 @@ public:
     
     ~EngineWorker();
     void run();
+    void stop();
     bool is_running() const {return !async_mode || run_flag;}
     
-    std::vector<std::shared_ptr<sf::Shape>> get_update(float sim_delta_time);
+    std::vector<std::shared_ptr<Physical>> get_update(float sim_delta_time);
 
 private:
 
@@ -33,7 +34,7 @@ private:
 
     std::thread engine_thread;
     std::atomic_bool run_flag;
-    std::vector<std::shared_ptr<sf::Shape>> render_buffer;
+    std::vector<std::shared_ptr<Physical>> render_buffer;
     std::mutex render_buffer_mutex;
 
     void engine_loop();

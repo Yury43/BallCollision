@@ -151,6 +151,7 @@
     <ClCompile Include="engine_worker.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="physicals.cpp" />
+    <ClCompile Include="profiler.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ball.h" />
@@ -160,6 +161,7 @@
     <ClInclude Include="disjoined_set_union.h" />
     <ClInclude Include="engine_worker.h" />
     <ClInclude Include="engine.h" />
+    <ClInclude Include="profiler.h" />
     <ClInclude Include="scenarios.h" />
     <ClInclude Include="vector_math.h" />
     <ClInclude Include="MiddleAverageFilter.h" />

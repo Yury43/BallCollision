@@ -1,26 +1,26 @@
 #include <iostream>
 #include <iomanip>
-#include <array>
 #include "engine.h"
 
-#include <cassert>
+#include <chrono>
 
 #include "scenarios.h"
 #include "disjoined_set_union.h"
 #include "collision.h"
 #include "collision_detector.h"
+#include "profiler.h"
 
 
 Engine::Engine()
 {
     init_random(objects);
-    // init_snooker(balls);
+    // init_snooker(objects);
     
-    //init_corner_bounce(balls);
-    // init_chain(balls);
-    // init_angled1(balls);
-    // init_angled2(balls);
-    // init_size(balls);
+    //init_corner_bounce(objects);
+    // init_chain(objects);
+    // init_angled1(objects);
+    // init_angled2(objects);
+    // init_size(objects);
     
     for (const auto & item : objects)
     {
@@ -31,8 +31,13 @@ Engine::Engine()
 
 
 
-std::vector<std::shared_ptr<sf::Shape>> Engine::run_iteration(const float delta_time)
+
+
+
+std::vector<std::shared_ptr<Physical>> Engine::run_iteration(const float delta_time)
 {
+    PROFILE();
+    
     if (objects.empty())
     {
         return {};
@@ -49,44 +54,49 @@ std::vector<std::shared_ptr<sf::Shape>> Engine::run_iteration(const float delta_
         std::shared_ptr<CollisionDetector> collision_detector;
         
         // collision_detector = std::make_shared<OnlineQuadTree>();
-        collision_detector = std::make_shared<OfflineQuadTree>(objects);
+        collision_detector = std::make_shared<QuadTree>(objects);
         // collision_detector = std::make_shared<BinGrid<Ball>>(balls);
         
         std::vector<std::pair<int, int>> colliding_pairs;
 
         int collision_test_count = 0;
         
-        for (const auto& ball : objects)
         {
-            // Test and handle collision with walls 
-            // Wall collisions have higher priority 
-            if (ball->test_and_handle_wall_collision(0, 0, WINDOW_X, WINDOW_Y))
+            PROFILE();
+            for (const auto& item : objects)
             {
-                continue;
+                // Test and handle collision with walls 
+                // Wall collisions have higher priority 
+                if (!item->handle_wall_collision(0, 0, WINDOW_X, WINDOW_Y))
+                {
+                    // Test collision with other balls
+                    PROFILE();
+                    collision_detector->detect_collisions(item, colliding_pairs, &collision_test_count);
+                }
             }
-
-            // Test collision with other balls in bins 
-
-            collision_detector->detect_collisions(ball, colliding_pairs, &collision_test_count);
         }
+
         
         // std::cout << "collision_test_count: " << collision_test_count << " / " << balls.size() * balls.size() << std::endl;
         
         // Find collisions involving same balls 
-
+        
         const int n_colliding_pairs = static_cast<int>(colliding_pairs.size());
         DisjoinedSetUnion colliding_sets(n_colliding_pairs);
 
-        for (int i = 0; i < n_colliding_pairs; ++i)
         {
-            for (int j = i + 1; j < n_colliding_pairs; ++j)
+            // PROFILE(); // 4 tot
+            for (int i = 0; i < n_colliding_pairs; ++i)
             {
-                if (colliding_pairs[i].first == colliding_pairs[j].first ||
-                    colliding_pairs[i].first == colliding_pairs[j].second ||
-                    colliding_pairs[i].second == colliding_pairs[j].first ||
-                    colliding_pairs[i].second == colliding_pairs[j].second)
+                for (int j = i + 1; j < n_colliding_pairs; ++j)
                 {
-                    colliding_sets.join(i, j);
+                    if (colliding_pairs[i].first == colliding_pairs[j].first ||
+                        colliding_pairs[i].first == colliding_pairs[j].second ||
+                        colliding_pairs[i].second == colliding_pairs[j].first ||
+                        colliding_pairs[i].second == colliding_pairs[j].second)
+                    {
+                        colliding_sets.join(i, j);
+                    }
                 }
             }
         }
@@ -99,6 +109,7 @@ std::vector<std::shared_ptr<sf::Shape>> Engine::run_iteration(const float delta_
         // if (false)
         if (true) // schedule single random collision in a system
         {
+            // PROFILE(); // 24 tot 
             for (std::pair<const int, std::vector<int>>& collision_set : colliding_sets.sets_by_parent())
             {
                 int selected_pair_id = collision_set.second[rand_gen() % collision_set.second.size()];
@@ -127,22 +138,29 @@ std::vector<std::shared_ptr<sf::Shape>> Engine::run_iteration(const float delta_
             }
         }
 
-        // Process new collisions and mark them accordingly 
-        for (Collision& collision : new_collisions)
         {
-            collision.handle();
-            //collision.mark_started();
+            // PROFILE(); // 4 tot
+            // Process new collisions and mark them accordingly 
+            for (Collision& collision : new_collisions)
+            {
+                collision.handle();
+                //collision.mark_started();
+            }
         }
 
-        // Apply new reactions 
-        for (auto& o : objects)
+        // Apply new reactions
         {
-            o->apply_reactions();
+            // PROFILE(); // 15 tot
+            for (auto& o : objects)
+            {
+                o->apply_reactions();
+            }
         }
 
 
         // if (false)
         {
+            // PROFILE(); // 40 tot 
             // Calculate total kinetic energy change to control accuracy of simulation 
 
             double total_energy = std::accumulate(objects.begin(), objects.end(), 0., [](double sum, const auto& item) {
@@ -178,18 +196,24 @@ std::vector<std::shared_ptr<sf::Shape>> Engine::run_iteration(const float delta_
         move_objects(delta_time);
     }
 
-    std::vector<std::shared_ptr<sf::Shape>> shapes;
-    shapes.reserve(objects.size());
-    for (const auto & item : objects)
+    std::vector<std::shared_ptr<Physical>> ready_objects;
+    ready_objects.reserve(objects.size());
+    for (const auto & o : objects)
     {
-        shapes.push_back(item->get_drawing_shape());
+        auto ball_ptr = dynamic_cast<Ball*>(o.get());
+        if (ball_ptr)
+            ready_objects.push_back(std::make_unique<Ball>(*ball_ptr));
     }
+    
+    return ready_objects;
 
-    return std::move(shapes);
 }
+
+
 
 void Engine::move_objects(const float deltaTime) 
 {
+    // PROFILE(); // 17 tot
     for (auto & item : objects)
     {
         item->update_position(deltaTime);

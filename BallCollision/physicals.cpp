@@ -5,6 +5,7 @@
 #include "physicals.h"
 
 #include "ball.h"
+#include "profiler.h"
 #include "vector_math.h"
 
 uint32_t Physical::next_id = 0;
@@ -24,6 +25,8 @@ constexpr float DELTA = 1e-3f;
 
 bool Ball::is_touching(const Physical* other) const
 {
+    // PROFILE();
+    
     if (other->id == this->id)
         return false;
     
@@ -137,13 +140,14 @@ void Ball::update_position(const float deltaTime)
     p.y += dr.y;
 }
 
-std::shared_ptr<sf::Shape> Ball::get_drawing_shape() 
+std::unique_ptr<sf::Shape> Ball::get_drawing_shape() 
 {
+    // PROFILE();
     sf::CircleShape shape;
     shape.setRadius(R);
     shape.setPosition(p.x - R, p.y - R); // consider ball.p to be the center
     shape.setFillColor(color);
-    return std::make_shared<sf::CircleShape>(std::move(shape));
+    return std::make_unique<sf::CircleShape>(shape);
 }
 
 Ball::Ball(const Ball& other)
@@ -176,8 +180,10 @@ double Ball::energy() const
     return std::pow(norm(velocity()), 2) * static_cast<double>(mass()) / 2;
 }
 
-bool Ball::test_and_handle_wall_collision(const float left, const float top, const float right, const float bottom)
+bool Ball::handle_wall_collision(const float left, const float top, const float right, const float bottom)
 {
+    PROFILE();
+    
     bool collided = false;
 
     if (p.x - R < left)

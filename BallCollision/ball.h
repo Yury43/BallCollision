@@ -23,16 +23,16 @@ public:
     void mark_colliding(bool is_colliding) override;
     void handle_collision(Physical* other) override;
     void update_position(float deltaTime) override;
-    std::shared_ptr<sf::Shape> get_drawing_shape() override;
+    std::unique_ptr<sf::Shape> get_drawing_shape() override;
 
     float mass() const;
     sf::Vector2f velocity() const;
     sf::Vector2f momentum() const;
     double energy() const;
 
-    bool test_and_handle_wall_collision(float left, float top, float right, float bottom) override;
+    bool handle_wall_collision(float left, float top, float right, float bottom) override;
     void apply_reactions() override;
-    float span() const override {return R;};
+    float span() const override {return R;}
     
 private:
     std::vector<Reaction> reactions = {};
