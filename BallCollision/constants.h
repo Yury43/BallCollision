@@ -15,3 +15,7 @@ constexpr bool ASYNC_PHYS = true; // run simulation in a thread separate from th
 
 constexpr bool MOVE_BEFORE_COLLISION = false; // Update positions after searching for collisions to render state preceding collision of next iteration 
 // constexpr bool MOVE_BEFORE_COLLISION = true; // Update positions before searching for collisions to account for current positions results in a more accurate sim
+
+// limit time of running the program, -1 to run indefinitely  
+constexpr int seconds_to_run_limit = -1;
+// constexpr int seconds_to_run_limit = 10;

@@ -39,7 +39,7 @@ int main()
     }
 
     auto start = std::chrono::system_clock::now();
-    const int seconds_to_run_limit = 10;
+
     
     while (window.isOpen())
     {
@@ -92,7 +92,7 @@ int main()
 
         auto running_duration = std::chrono::system_clock::now() - start;
         double running_for_seconds = std::chrono::duration_cast<std::chrono::seconds>(running_duration).count(); 
-        if (running_for_seconds >= seconds_to_run_limit)
+        if (seconds_to_run_limit > 0 && running_for_seconds >= seconds_to_run_limit)
         {
             std::cout << "Have been running for " << running_for_seconds << ", shutting down" << std::endl;
             break;
