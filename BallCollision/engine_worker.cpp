@@ -18,11 +18,9 @@ void EngineWorker::engine_loop()
     using namespace std::chrono_literals;
     sf::Clock clock;
     float last_time = clock.restart().asSeconds();
-    float speed_up = 4;
-    // float speed_up = 8;
-
+    
     // calculate target iteration delay and next iteration time
-    const std::chrono::duration<double, std::micro> iteration_delay = 1000000us / TARGET_FRAMERATE / speed_up;
+    const std::chrono::duration<double, std::micro> iteration_delay = 1000000us / TARGET_FRAMERATE / MAX_PHYS_SPEEDUP;
     
     auto next_iteration_time = std::chrono::steady_clock::now() + iteration_delay;
     std::cout << "physics_loop running" << std::endl;
@@ -30,10 +28,10 @@ void EngineWorker::engine_loop()
     while (run_flag)
     {
         float current_time = clock.getElapsedTime().asSeconds();
-        float deltaTime = (current_time - last_time) * speed_up;
+        float deltaTime = (current_time - last_time) * MAX_PHYS_SPEEDUP;
         last_time = current_time;
 
-        auto gballs = engine.run_iteration(deltaTime / speed_up);
+        auto gballs = engine.run_iteration(deltaTime / MAX_PHYS_SPEEDUP);
 
         // Place shapes to draw in drawing buffer 
         {

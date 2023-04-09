@@ -10,12 +10,18 @@ constexpr int MIN_BALLS = 100;
 constexpr float M_PI = 3.1415926f;
 constexpr int TARGET_FRAMERATE = 60;
 
-//constexpr bool ASYNC_PHYS = false; // run simulation is the same thread as the window 
-constexpr bool ASYNC_PHYS = true; // run simulation in a thread separate from the window
+constexpr bool ASYNC_PHYS = false; // run simulation is the same thread as the window 
+// constexpr bool ASYNC_PHYS = true; // run simulation in a thread separate from the window
 
-constexpr bool MOVE_BEFORE_COLLISION = false; // Update positions after searching for collisions to render state preceding collision of next iteration 
-// constexpr bool MOVE_BEFORE_COLLISION = true; // Update positions before searching for collisions to account for current positions results in a more accurate sim
+/* Order of moving, colliding and rendering steps */ 
+// constexpr bool MOVE_BEFORE_COLLISION = true;  // "move - collide - render" Dont render incorrect states 
+constexpr bool MOVE_BEFORE_COLLISION = false;   // "move - render - collide" Ensure not to miss the moment of contact 
 
 // limit time of running the program, -1 to run indefinitely  
-constexpr int seconds_to_run_limit = -1;
-// constexpr int seconds_to_run_limit = 10;
+// constexpr int seconds_to_run_limit = -1;
+constexpr int seconds_to_run_limit = 10;
+
+// max number of simulation steps per frame in async mode 
+// constexpr float MAX_PHYS_SPEEDUP = 1;
+constexpr float MAX_PHYS_SPEEDUP = 4;
+// constexpr float MAX_PHYS_SPEEDUP = 8;
