@@ -29,14 +29,9 @@ Engine::Engine()
 }
 
 
-
-
-
-
-
 std::vector<std::shared_ptr<Physical>> Engine::run_iteration(const float delta_time)
 {
-    PROFILE();
+    PROFILE("Engine::run_iteration");
     
     if (objects.empty())
     {
@@ -55,12 +50,12 @@ std::vector<std::shared_ptr<Physical>> Engine::run_iteration(const float delta_t
         QuadTreeOnVector collision_detector(objects);
         
         
-        std::vector<std::pair<int, int>> colliding_pairs;
+        std::vector<std::pair<uint32_t, uint32_t>> colliding_pairs;
 
         int collision_test_count = 0;
         
         {
-            PROFILE();
+            PROFILE("Engine::run_iteration");
             for (const auto& item : objects)
             {
                 // Test and handle collision with walls 
@@ -68,8 +63,8 @@ std::vector<std::shared_ptr<Physical>> Engine::run_iteration(const float delta_t
                 if (!item->handle_wall_collision(0, 0, WINDOW_X, WINDOW_Y))
                 {
                     // Test collision with other balls
-                    PROFILE();
-                    collision_detector.detect_collisions(item, colliding_pairs, &collision_test_count);
+                    // PROFILE("Engine::run_iteration");
+                    collision_detector.detect_collisions(item.get(), colliding_pairs, &collision_test_count);
                 }
             }
         }

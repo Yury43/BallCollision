@@ -3,7 +3,6 @@
 #include <SFML/System/Vector2.hpp>
 #include <vector>
 #include "vector_math.h"
-#include <iostream>
 
 // Abstract physical object parenting Ball and (previously) Line 
 

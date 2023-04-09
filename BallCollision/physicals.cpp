@@ -182,7 +182,7 @@ double Ball::energy() const
 
 bool Ball::handle_wall_collision(const float left, const float top, const float right, const float bottom)
 {
-    PROFILE();
+    // PROFILE();
     
     bool collided = false;
 

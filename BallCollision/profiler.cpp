@@ -8,9 +8,10 @@
 #include <unordered_map>
 #include <iomanip>
 #include "profiler.h"
+#include <map>
 
 
-
+// std::map<std::string, std::vector<double>> durations_mcs_by_name = {};
 std::unordered_map<std::string, std::vector<double>> durations_mcs_by_name = {};
 
 ProfilingTimer::~ProfilingTimer()
