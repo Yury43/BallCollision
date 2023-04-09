@@ -74,28 +74,14 @@ void Ball::handle_collision(Physical* other)
     {
         auto r1 = p;
         auto r2 = other_ball->p;
-
-        // correct positions 
         
-        auto dr1 = sf::Vector2f(0, 0);
-        auto dr2 = sf::Vector2f(0, 0);
-
-        if (norm(r1 - r2) < R + other_ball->R + DELTA)
-        {
-            auto c = (r1 + r2) / 2.f;
-            auto drc1 = r1 - c;
-            auto drc2 = r2 - c;
-            dr1 = normalized(drc1) * (R - norm(drc1) + DELTA * 2);
-            dr2 = normalized(drc2) * (other_ball->R - norm(drc2) + DELTA * 2);
-
-            r1 = r1 + dr1;
-            r2 = r2 + dr2;
-        }
-
-        // calculate velocity deltas 
+        auto R1 = R;
+        auto R2 = other_ball->R;
 
         float m1 = mass();
         float m2 = other_ball->mass();
+
+        // calculate velocity deltas 
 
         auto v1 = velocity();
         auto v2 = other_ball->velocity();
@@ -103,9 +89,29 @@ void Ball::handle_collision(Physical* other)
         auto r12 = r1 - r2;
         auto r21 = -r12;
 
-        auto dv1 = v1 - (m2 * 2 / (m1 + m2)) * dot(v1 - v2, r12) / std::powf(norm(r12), 2) * r12;
-        auto dv2 = v2 - (m1 * 2 / (m1 + m2)) * dot(v2 - v1, r21) / std::powf(norm(r21), 2) * r21;
+        auto dv1 = v1 - m2 * 2 / (m1 + m2) * dot(v1 - v2, r12) / std::powf(norm(r12), 2) * r12;
+        auto dv2 = v2 - m1 * 2 / (m1 + m2) * dot(v2 - v1, r21) / std::powf(norm(r21), 2) * r21;
+        
+        // correct positions 
+        
+        auto dr1 = sf::Vector2f(0, 0);
+        auto dr2 = sf::Vector2f(0, 0);
 
+        if (norm(r1 - r2) < R1 + R2 + DELTA)
+        {
+            auto c = (r1 + r2) / 2.f;
+            auto drc1 = (r1 - c) * (R1 * 2 / (R1 + R2));
+            auto drc2 = (r2 - c) * (R2 * 2 / (R1 + R2));
+            
+            dr1 = normalized(drc1) * (R1 - norm(drc1) + DELTA * 2);
+            dr2 = normalized(drc2) * (R2 - norm(drc2) + DELTA * 2);
+
+            r1 += dr1;
+            r2 += dr2;
+        }
+
+        // push reactions to apply 
+        
         if (norm(dv1) > 1e-5f || norm(dr1) > DELTA)
         {
             reactions.push_back({ dv1, r1 });
