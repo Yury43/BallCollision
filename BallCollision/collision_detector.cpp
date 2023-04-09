@@ -32,8 +32,6 @@ void QuadTree::detect_collisions(
     int* collision_test_counter
 ) 
 {
-    // PROFILE();
-    
     std::vector<const Physical*> proxy;
     // proxy.reserve(proxy_reserve);
     
@@ -41,10 +39,8 @@ void QuadTree::detect_collisions(
 
     proxy_reserve = (proxy_reserve * 2 + proxy.size()) / 3;
     
-    // std::unordered_set<uint32_t> ids;
     for (const auto & other : proxy)
     {
-        // ids.insert(other->id);
         if (that->id != other->id)
         {
             if (collision_test_counter != nullptr)
@@ -58,32 +54,29 @@ void QuadTree::detect_collisions(
     }
 
     quad_tree_root.push(that);
-    // std::cout << proxy.size() << "/" << ids.size() << " ";
 }
 
-int QuadTreeOnVector::create_new_node(const Quadrant & q)
+int LightQuadTree::create_new_node(const Quadrant & q)
 {
-    nodes[next_placed_node] = LazyQuadTreeNodeOnVector(q);
+    nodes[next_placed_node] = LightQuadTreeNode(q);
     next_placed_node++;
     return next_placed_node - 1;
     // nodes.emplace_back(LazyQuadTreeNodeOnVector(q));
     // return static_cast<int>(nodes.size() - 1);
 }
 
-QuadTreeOnVector::QuadTreeOnVector(const std::vector<std::shared_ptr<Physical>>& objects)
+LightQuadTree::LightQuadTree(const std::vector<std::shared_ptr<Physical>>& objects)
 : max_span(calc_max_object_span(objects))
 {
     // nodes.reserve(objects.size());
     create_new_node({0, 0, WINDOW_X, WINDOW_X});
 }
 
-void QuadTreeOnVector::detect_collisions(
+void LightQuadTree::detect_collisions(
     const Physical* that,
     std::vector<std::pair<uint32_t, uint32_t>>& colliding_pairs,
     int* collision_test_counter)
 {
-    // PROFILE();
-    
     std::vector<const Physical*> proxy;
     // proxy.reserve(proxy_reserve);
     
@@ -91,10 +84,8 @@ void QuadTreeOnVector::detect_collisions(
 
     proxy_reserve = (proxy_reserve * 2 + proxy.size()) / 3;
     
-    // std::unordered_set<uint32_t> ids;
     for (const auto & other : proxy)
     {
-        // ids.insert(other->id);
         if (that->id != other->id)
         {
             if (collision_test_counter != nullptr)
@@ -108,7 +99,6 @@ void QuadTreeOnVector::detect_collisions(
     }
 
     push(0, that);
-    // std::cout << proxy.size() << "/" << ids.size() << " ";
 }
 
 
@@ -223,15 +213,8 @@ size_t LazyQuadTreeNode::count_items() const
     return size;
 }
 
-// bool LazyQuadTreeNode::has_leaves() const
-// {
-//     return std::any_of(leaves.cbegin(), leaves.cend(), [](const std::unique_ptr<LazyQuadTreeNode> & leaf){return leaf != nullptr;});
-// }
-
 void LazyQuadTreeNode::collect_proxy(const sf::Vector2f & loc, const float R, std::vector<const Physical*>& collection) const
 {
-    // PROFILE();
-    
     collect_proxy(Quadrant{
         loc.x - R,
         loc.y - R,
@@ -263,20 +246,18 @@ void LazyQuadTreeNode::collect_proxy(const Quadrant & loc, std::vector<const Phy
 
 
 
-LazyQuadTreeNodeOnVector::LazyQuadTreeNodeOnVector(const Quadrant & q_) :
+LightQuadTreeNode::LightQuadTreeNode(const Quadrant & q_) :
 quadrant(q_)
-// , subquadrants(q_.divide())
 {
     assert(quadrant.l < quadrant.r && quadrant.t < quadrant.b);
 }
 
-int QuadTreeOnVector::get_next_node(const int pos, const sf::Vector2f loc)
+int LightQuadTree::get_next_node(const int pos, const sf::Vector2f loc)
 {
     float loc_x = loc.x;
     float loc_y = loc.y;
 
     auto sub = nodes[pos].quadrant.divide();
-    // sub = nodes[pos].quadrant.divide();
 
     if (nodes[pos].first_leaf == -1)
     {
@@ -296,7 +277,7 @@ int QuadTreeOnVector::get_next_node(const int pos, const sf::Vector2f loc)
     return -1;
 }
 
-void QuadTreeOnVector::push(const int pos, const Physical* item)
+void LightQuadTree::push(const int pos, const Physical* item)
 {
     if (!nodes[pos].content && nodes[pos].first_leaf == -1)
     {
@@ -314,10 +295,8 @@ void QuadTreeOnVector::push(const int pos, const Physical* item)
     push(get_next_node(pos, item->p), item);
 }
 
-void QuadTreeOnVector::collect_proxy(const int pos, const sf::Vector2f & loc, const float R, std::vector<const Physical*>& collection) const
+void LightQuadTree::collect_proxy(const int pos, const sf::Vector2f & loc, const float R, std::vector<const Physical*>& collection) const
 {
-    // PROFILE();
-    
     collect_proxy(pos,
                   Quadrant{
                       loc.x - R,
@@ -327,7 +306,7 @@ void QuadTreeOnVector::collect_proxy(const int pos, const sf::Vector2f & loc, co
 }
 
 
-void QuadTreeOnVector::collect_proxy(const int pos, const Quadrant & loc, std::vector<const Physical*>& collection) const
+void LightQuadTree::collect_proxy(const int pos, const Quadrant & loc, std::vector<const Physical*>& collection) const
 {
     if (nodes[pos].content)
     {

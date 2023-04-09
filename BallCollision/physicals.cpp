@@ -18,23 +18,12 @@ uint32_t Physical::next_id = 0;
 
 constexpr float DELTA = 1e-3f;
 
-// static bool are_touching(const Ball& b1, const Ball& b2)
-// {
-//     return b1.is_touching(b2) dist(b1.p, b2.p) < b1.R + b2.R + DELTA;
-// }
 
 bool Ball::is_touching(const Physical* other) const
 {
-    // PROFILE();
-    
     if (other->id == this->id)
         return false;
-    
-    //const Line* other_as_line = dynamic_cast<const Line*>(other);
-    //if (other_as_line != nullptr)
-    //{
-    //    return are_touching(*other_as_line, *this);
-    //}
+
     auto other_ball = dynamic_cast<const Ball*>(other);
     if (other_ball)
     {
@@ -142,7 +131,6 @@ void Ball::update_position(const float deltaTime)
 
 std::unique_ptr<sf::Shape> Ball::get_drawing_shape() 
 {
-    // PROFILE();
     sf::CircleShape shape;
     shape.setRadius(R);
     shape.setPosition(p.x - R, p.y - R); // consider ball.p to be the center

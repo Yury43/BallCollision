@@ -16,7 +16,7 @@ public:
     void mark_started() const;
     void mark_finished() const;
 
-    void handle();
+    void handle() const;
 
 private:
     std::shared_ptr<Physical> party1;
@@ -32,7 +32,7 @@ namespace std
     template <>
     struct hash<Collision>
     {
-        std::size_t operator()(const Collision& c) const
+        std::size_t operator()(const Collision& c) const noexcept
         {
             return c.cid;
         }

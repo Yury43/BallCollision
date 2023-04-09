@@ -27,5 +27,5 @@ private:
     
     std::mt19937 rand_gen = RandGen::get(); 
     
-    void move_objects(float deltaTime); 
+    void move_objects(float deltaTime) const; 
 };

@@ -14,7 +14,7 @@ bool Collision::are_touching() const
     return party1->is_touching(party2.get());
 }
 
-void Collision::handle()
+void Collision::handle() const
 {
     return party1->handle_collision(party2.get());
 }

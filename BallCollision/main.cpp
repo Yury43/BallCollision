@@ -19,17 +19,6 @@ void draw_fps(sf::RenderWindow& window, const float fps)
     window.setTitle(str);
 }
 
-// std::vector<std::shared_ptr<sf::Shape>> get_drawing_shapes(const std::vector<std::shared_ptr<Physical>> & objects)
-// {
-//     PROFILE();
-//     std::vector<std::shared_ptr<sf::Shape>> shapes;
-//     shapes.reserve(objects.size());
-//     for (const auto & item : objects)
-//     {
-//         shapes.push_back(item->get_drawing_shape());
-//     }
-//     return shapes;
-// }
 
 int main()
 {    

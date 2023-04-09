@@ -29,7 +29,6 @@ void EngineWorker::engine_loop()
 
     while (run_flag)
     {
-        // PROFILE();
         float current_time = clock.getElapsedTime().asSeconds();
         float deltaTime = (current_time - last_time) * speed_up;
         last_time = current_time;
