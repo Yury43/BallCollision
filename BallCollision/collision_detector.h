@@ -27,7 +27,6 @@ public:
         std::vector<std::pair<int, int>> & colliding_pairs,
         int* collision_test_counter = nullptr
     ) = 0;
-    
 };
 
 
@@ -144,7 +143,7 @@ class LazyQuadTreeNode
 {
 public:
     explicit LazyQuadTreeNode(const Quadrant & q_);
-    LazyQuadTreeNode* find_next_node(sf::Vector2f loc);
+    LazyQuadTreeNode* get_next_node(sf::Vector2f loc);
 
     void push(const std::shared_ptr<Physical> & item);
 
@@ -169,6 +168,7 @@ private:
     bool has_leaves = false;
 };
 
+class LazyQuadTreeNodeOnVector;
 
 class QuadTree : public CollisionDetector
 {
@@ -187,4 +187,60 @@ private:
     
     LazyQuadTreeNode quad_tree_root;
     const float max_span;
+};
+
+
+class QuadTreeOnVector : public CollisionDetector
+{
+public:
+    int create_new_node(const Quadrant& q);
+    explicit  QuadTreeOnVector(const std::vector<std::shared_ptr<Physical>> & objects) ;
+
+    ~QuadTreeOnVector() override = default;
+    
+    void detect_collisions(
+        const std::shared_ptr<Physical> & that,
+        std::vector<std::pair<int, int>> & colliding_pairs,
+        int* collision_test_counter = nullptr
+    ) override;
+    
+private:
+
+    std::vector<LazyQuadTreeNodeOnVector> nodes;
+    // std::array<LazyQuadTreeNodeOnVector> nodes;
+    const float max_span;
+
+        
+    int get_next_node(int pos, sf::Vector2f loc);
+
+    void push(int pos, const std::shared_ptr<Physical> & item);
+    
+    void collect_proxy(int pos, const sf::Vector2f & loc, float R, std::vector<std::shared_ptr<Physical>> & collection) const;
+
+    void collect_proxy(int pos, const Quadrant & loc, std::vector<std::shared_ptr<Physical>>& collection) const;
+};
+
+
+class LazyQuadTreeNodeOnVector
+{
+public:
+    explicit LazyQuadTreeNodeOnVector(const Quadrant & q_);
+
+    
+    LazyQuadTreeNodeOnVector(const LazyQuadTreeNodeOnVector& _) = default;
+    LazyQuadTreeNodeOnVector(LazyQuadTreeNodeOnVector &&_) = default;
+    
+    LazyQuadTreeNodeOnVector& operator =(LazyQuadTreeNodeOnVector && _) = delete;
+    LazyQuadTreeNodeOnVector operator =(const LazyQuadTreeNodeOnVector & _) = delete;
+
+    
+private:
+
+    Quadrant quadrant;
+    std::array<int, 4> leaves = {0};
+
+    std::shared_ptr<Physical> content;
+    bool has_leaves = false;
+
+    friend QuadTreeOnVector;
 };

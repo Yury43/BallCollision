@@ -14,7 +14,7 @@ public:
     Ball(const Ball& other);
     Ball(Ball &&_) = delete;
     Ball operator =(const Ball & _) = delete;
-    Ball operator =(const Ball && _) = delete;
+    Ball& operator =(const Ball && _) = delete;
     
     ~Ball() override = default;
 

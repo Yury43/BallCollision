@@ -62,6 +62,52 @@ void QuadTree::detect_collisions(
     // std::cout << proxy.size() << "/" << ids.size() << " ";
 }
 
+int QuadTreeOnVector::create_new_node(const Quadrant & q)
+{
+    nodes.emplace_back(LazyQuadTreeNodeOnVector(q));
+    return static_cast<int>(nodes.size() - 1);
+}
+
+QuadTreeOnVector::QuadTreeOnVector(const std::vector<std::shared_ptr<Physical>>& objects)
+: max_span(calc_max_object_span(objects))
+{
+    nodes.reserve(objects.size());
+    create_new_node({0, 0, WINDOW_X, WINDOW_X});
+}
+
+void QuadTreeOnVector::detect_collisions(
+    const std::shared_ptr<Physical>& that,
+    std::vector<std::pair<int, int>>& colliding_pairs,
+    int* collision_test_counter)
+{
+    PROFILE();
+    
+    std::vector<std::shared_ptr<Physical>> proxy;
+    // proxy.reserve(proxy_reserve);
+    
+    collect_proxy(0, that->p, max_span * 2, proxy);
+
+    proxy_reserve = (proxy_reserve * 2 + proxy.size()) / 3;
+    
+    // std::unordered_set<uint32_t> ids;
+    for (const auto & other : proxy)
+    {
+        // ids.insert(other->id);
+        if (that->id != other->id)
+        {
+            if (collision_test_counter != nullptr)
+                (*collision_test_counter)++;
+            
+            if (that->is_touching(other.get()))
+            {
+                colliding_pairs.push_back({ that->id, other->id });
+            }    
+        }
+    }
+
+    push(0, that);
+    // std::cout << proxy.size() << "/" << ids.size() << " ";
+}
 
 
 bool Quadrant::overlap(const Quadrant & other, Quadrant & intersection) const 
@@ -108,7 +154,7 @@ quadrant(q_)
     assert(quadrant.l < quadrant.r && quadrant.t < quadrant.b);
 }
 
-LazyQuadTreeNode* LazyQuadTreeNode::find_next_node(const sf::Vector2f loc)
+LazyQuadTreeNode* LazyQuadTreeNode::get_next_node(const sf::Vector2f loc)
 {
     float loc_x = loc.x;
     float loc_y = loc.y;
@@ -146,10 +192,10 @@ void LazyQuadTreeNode::push(const std::shared_ptr<Physical> & item)
     if (content)
     {            
         std::shared_ptr<Physical> closest = std::move(content);    
-        find_next_node(closest->p)->push(closest);
+        get_next_node(closest->p)->push(closest);
     }
 
-    find_next_node(item->p)->push(item);
+    get_next_node(item->p)->push(item);
 }
 
 size_t LazyQuadTreeNode::count_nodes() const 
@@ -209,6 +255,92 @@ void LazyQuadTreeNode::collect_proxy(const Quadrant & loc, std::vector<std::shar
         {
             if (leaves[i])
                 leaves[i]->collect_proxy(intersection, collection);
+        }
+    }
+}
+
+
+
+LazyQuadTreeNodeOnVector::LazyQuadTreeNodeOnVector(const Quadrant & q_) :
+quadrant(q_)
+// , subquadrants(q_.divide())
+{
+    assert(quadrant.l < quadrant.r && quadrant.t < quadrant.b);
+}
+
+int QuadTreeOnVector::get_next_node(const int pos, const sf::Vector2f loc)
+{
+    float loc_x = loc.x;
+    float loc_y = loc.y;
+
+    auto sub = nodes[pos].quadrant.divide();
+    // sub = nodes[pos].quadrant.divide();
+    
+    for (int i = 0; i < 4; ++i)
+    {
+        if (sub[i].contains(loc_x, loc_y))
+        {
+            if (nodes[pos].leaves[i] == 0)
+            {
+                nodes[pos].leaves[i] = create_new_node(sub[i]);
+                nodes[pos].has_leaves = true;
+            }
+            
+            return nodes[pos].leaves[i];
+        }
+    }
+    
+    return -1;
+}
+
+void QuadTreeOnVector::push(const int pos, const std::shared_ptr<Physical> & item)
+{
+    if (!nodes[pos].content && !nodes[pos].has_leaves)
+    {
+        nodes[pos].content = item;
+        return;
+    }
+    
+    if (nodes[pos].content)
+    {            
+        std::shared_ptr<Physical> closest = std::move(nodes[pos].content);
+        push(get_next_node(pos, closest->p), closest);
+    }
+
+    push(get_next_node(pos, item->p), item);
+}
+
+void QuadTreeOnVector::collect_proxy(const int pos, const sf::Vector2f & loc, const float R, std::vector<std::shared_ptr<Physical>> & collection) const
+{
+    // PROFILE();
+    
+    collect_proxy(pos,
+        
+                  Quadrant{
+                      loc.x - R,
+                      loc.y - R,
+                      loc.x + R,
+                      loc.y + R}, collection);
+}
+
+
+void QuadTreeOnVector::collect_proxy(const int pos, const Quadrant & loc, std::vector<std::shared_ptr<Physical>>& collection) const
+{
+    if (nodes[pos].content)
+    {
+        collection.push_back(nodes[pos].content);
+        return;
+    }
+
+    Subdivision sub = nodes[pos].quadrant.divide();
+    for (int i = 0; i < 4; ++i)
+    {
+        Quadrant intersection = {};
+        
+        if (sub[i].overlap(loc, intersection))
+        {
+            if (nodes[pos].leaves[i])
+                collect_proxy(nodes[pos].leaves[i], intersection, collection);
         }
     }
 }
