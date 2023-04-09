@@ -56,7 +56,7 @@ void QuadTree::detect_collisions(
     quad_tree_root.push(that);
 }
 
-int LightQuadTree::create_new_node(const Quadrant & q)
+int LightQuadTree::create_new_node(const Quad & q)
 {
     nodes[next_placed_node] = LightQuadTreeNode(q);
     next_placed_node++;
@@ -102,44 +102,9 @@ void LightQuadTree::detect_collisions(
 }
 
 
-bool Quadrant::overlap(const Quadrant & other, Quadrant & intersection) const 
-{
-    if (other.l > r || other.t > b || other.r < l || other.b < t)
-    {
-        return false;
-    }
 
-    intersection = {
-        std::max(l, other.l),
-        std::max(t, other.t),
-        std::min(r, other.r),
-        std::min(b, other.b),
-    };
-    
-    return true;
-}
-
-Subdivision Quadrant::divide() const 
-{
-    float mx = (l + r) / 2;
-    float my = (t + b) / 2;
-    
-    return Subdivision
-    {
-        Quadrant{l, t, mx, my},
-        Quadrant{mx, t, r, my},
-        Quadrant{mx, my, r, b},
-        Quadrant{l, my, mx, b}
-    };
-}
-
-bool Quadrant::contains(const float x, const float y) const 
-{
-    return l <= x && x <= r && t <= y && y <= b;
-}
-
-
-LazyQuadTreeNode::LazyQuadTreeNode(const Quadrant & q_) :
+// subquadrants are init initialized on purpose 
+LazyQuadTreeNode::LazyQuadTreeNode(const Quad & q_) :
 quadrant(q_)
 // , subquadrants(q_.divide())
 {
@@ -215,7 +180,7 @@ size_t LazyQuadTreeNode::count_items() const
 
 void LazyQuadTreeNode::collect_proxy(const sf::Vector2f & loc, const float R, std::vector<const Physical*>& collection) const
 {
-    collect_proxy(Quadrant{
+    collect_proxy(Quad{
         loc.x - R,
         loc.y - R,
         loc.x + R,
@@ -225,7 +190,7 @@ void LazyQuadTreeNode::collect_proxy(const sf::Vector2f & loc, const float R, st
 }
 
 
-void LazyQuadTreeNode::collect_proxy(const Quadrant & loc, std::vector<const Physical*>& collection) const
+void LazyQuadTreeNode::collect_proxy(const Quad & loc, std::vector<const Physical*>& collection) const
 {
     if (content)
     {
@@ -235,7 +200,7 @@ void LazyQuadTreeNode::collect_proxy(const Quadrant & loc, std::vector<const Phy
     
     for (int i = 0; i < 4; ++i)
     {
-        Quadrant intersection = {};
+        Quad intersection = {};
         if (subquadrants[i].overlap(loc, intersection))
         {
             if (leaves[i])
@@ -244,9 +209,7 @@ void LazyQuadTreeNode::collect_proxy(const Quadrant & loc, std::vector<const Phy
     }
 }
 
-
-
-LightQuadTreeNode::LightQuadTreeNode(const Quadrant & q_) :
+LightQuadTreeNode::LightQuadTreeNode(const Quad & q_) :
 quadrant(q_)
 {
     assert(quadrant.l < quadrant.r && quadrant.t < quadrant.b);
@@ -298,15 +261,17 @@ void LightQuadTree::push(const int pos, const Physical* item)
 void LightQuadTree::collect_proxy(const int pos, const sf::Vector2f & loc, const float R, std::vector<const Physical*>& collection) const
 {
     collect_proxy(pos,
-                  Quadrant{
-                      loc.x - R,
-                      loc.y - R,
-                      loc.x + R,
-                      loc.y + R}, collection);
+                  Quad(
+                     loc.x - R,
+                     loc.y - R,
+                     loc.x + R,
+                     loc.y + R
+                     ),
+                     collection);
 }
 
 
-void LightQuadTree::collect_proxy(const int pos, const Quadrant & loc, std::vector<const Physical*>& collection) const
+void LightQuadTree::collect_proxy(const int pos, const Quad & loc, std::vector<const Physical*>& collection) const
 {
     if (nodes[pos].content)
     {
@@ -317,10 +282,10 @@ void LightQuadTree::collect_proxy(const int pos, const Quadrant & loc, std::vect
     if (nodes[pos].first_leaf == -1)
         return;
     
-    Subdivision sub = nodes[pos].quadrant.divide();
+    Quad::Subdivision sub = nodes[pos].quadrant.divide();
     for (int i = 0; i < 4; ++i)
     {
-        Quadrant intersection = {};
+        Quad intersection = {};
         if (sub[i].overlap(loc, intersection))
             collect_proxy(nodes[pos].first_leaf + i, intersection, collection);
     }

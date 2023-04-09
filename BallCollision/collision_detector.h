@@ -125,24 +125,119 @@ private:
     }
 };
 
-struct Quadrant;
-using Subdivision = std::array<Quadrant, 4>;
+// struct Quadrant;
 
+
+template<typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
 struct Quadrant
 {
-    float l, t, r, b;
+    typedef std::array<Quadrant, 4> Subdivision;
+    
+    T l, t, r, b;
 
     Quadrant() = default;
+
+    Quadrant(const T l_, const T t_, const T r_, const T b_)
+    :
+        l(l_),
+        t(t_),
+        r(r_),
+        b(b_)
+    {}
     
-    bool overlap(const Quadrant & other, Quadrant & intersection) const;
-    Subdivision divide() const; 
-    bool contains(float x, float y) const; 
+    bool overlap(const Quadrant & other, Quadrant & intersection) const
+    {
+        if (other.l > r || other.t > b || other.r < l || other.b < t)
+        {
+            return false;
+        }
+
+        intersection = {
+            std::max<T>(l, other.l),
+            std::max<T>(t, other.t),
+            std::min<T>(r, other.r),
+            std::min<T>(b, other.b),
+        };
+    
+        return true;
+    }
+
+    
+# if __cplusplus >= 20170L
+    [[nodiscard]] Subdivision divide() const 
+    {
+        T mx = (l + r) / 2;
+        T my = (t + b) / 2;
+    
+        if constexpr (std::is_floating_point<T>::value)
+        {
+            return Subdivision
+            {
+                Quadrant{l, t, mx, my},
+                Quadrant{mx, t, r, my},
+                Quadrant{mx, my, r, b},
+                Quadrant{l, my, mx, b}
+            };
+        }
+        else
+        {
+            return Subdivision // for int 
+            {
+                Quadrant{l, t, mx, my},
+                Quadrant{mx + 1, t, r, my},
+                Quadrant{mx + 1, my + 1, r, b},
+                Quadrant{l, my, mx + 1, b}
+            };
+        }
+    }
+#else
+    template<class Q = T>
+    typename std::enable_if<std::is_floating_point<Q>::value, Subdivision>::type
+    divide() const 
+    {
+        Q mx = (l + r) / 2;
+        Q my = (t + b) / 2;
+    
+        return Subdivision
+        {
+            Quadrant{l, t, mx, my},
+            Quadrant{mx, t, r, my},
+            Quadrant{mx, my, r, b},
+            Quadrant{l, my, mx, b}
+        };
+    }
+    
+    template<class Q = T>
+    typename std::enable_if<std::is_integral<Q>::value, Subdivision>::type
+    divide() const 
+    {
+        Q mx = (l + r) / 2;
+        Q my = (t + b) / 2;
+    
+        return Subdivision
+        {
+            Quadrant{l, t, mx, my},
+            Quadrant{mx + 1, t, r, my},
+            Quadrant{mx + 1, my + 1, r, b},
+            Quadrant{l, my, mx + 1, b}
+        };
+    }
+
+#endif
+        
+    [[nodiscard]] bool contains(const T x, const T y) const 
+    {
+        return l <= x && x <= r && t <= y && y <= b;
+    } 
 };
+
 
 class LazyQuadTreeNode
 {
 public:
-    explicit LazyQuadTreeNode(const Quadrant & q_);
+    typedef Quadrant<float> Quad;
+    
+    explicit LazyQuadTreeNode(const Quad & q_);
     LazyQuadTreeNode* get_next_node(sf::Vector2f loc);
 
     void push(const Physical* item);
@@ -150,18 +245,20 @@ public:
     size_t count_nodes() const ;
     size_t count_items() const ;
     void collect_proxy(const sf::Vector2f & loc, float R, std::vector<const Physical*>& collection) const;
-    void collect_proxy(const Quadrant & loc, std::vector<const Physical*>& collection) const;
+    void collect_proxy(const Quad & loc, std::vector<const Physical*>& collection) const;
     
 private:
 
-    Quadrant quadrant;
-    Subdivision subquadrants;
+    Quad quadrant;
+    Quad::Subdivision subquadrants;
     std::array<std::unique_ptr<LazyQuadTreeNode>, 4> leaves;
     const Physical* content = nullptr;
     bool has_leaves = false;
 };
 
+
 class LightQuadTreeNode;
+
 
 class QuadTree : public CollisionDetector
 {
@@ -186,36 +283,39 @@ private:
     const float max_span;
 };
 
-class LightQuadTree;
 
+// subquadrants are not initialized intentionally
 class LightQuadTreeNode
 {
 public:
+    typedef Quadrant<float> Quad;
+    // typedef Quadrant<int> Quad; // speedup is not too great 
+    
     LightQuadTreeNode() = default;
-    explicit LightQuadTreeNode(const Quadrant & q_);
-
+    explicit LightQuadTreeNode(const Quad & q_);
     
     LightQuadTreeNode(const LightQuadTreeNode& _) = default;
     LightQuadTreeNode(LightQuadTreeNode &&_) = default;
     LightQuadTreeNode& operator =(LightQuadTreeNode && _) = default;
     
     LightQuadTreeNode operator =(const LightQuadTreeNode & _) = delete;
-
     
 private:
 
-    Quadrant quadrant;
+    Quad quadrant;
     int first_leaf = -1;
 
     const Physical* content = nullptr;
 
-    friend LightQuadTree;
+    friend class LightQuadTree;
 };
 
 
 class LightQuadTree : public CollisionDetector
 {
 public:
+
+    using Quad = LightQuadTreeNode::Quad;
     
     explicit  LightQuadTree(const std::vector<std::shared_ptr<Physical>> & objects) ;
     LightQuadTree(const LightQuadTree& _) = delete;
@@ -233,16 +333,15 @@ public:
     
 private:
 
-    std::array<LightQuadTreeNode, (size_t) MAX_BALLS * 4> nodes;
+    std::array<LightQuadTreeNode, static_cast<size_t>(MAX_BALLS * 4)> nodes;
     int next_placed_node = 0;
     const float max_span;
-
         
-    int create_new_node(const Quadrant& q);
+    int create_new_node(const Quad& q);
     int get_next_node(int pos, sf::Vector2f loc);
     void push(int pos, const Physical* item);
     void collect_proxy(int pos, const sf::Vector2f & loc, float R, std::vector<const Physical*>& collection) const;
-    void collect_proxy(int pos, const Quadrant & loc, std::vector<const Physical*>& collection) const;
+    void collect_proxy(int pos, const Quad & loc, std::vector<const Physical*>& collection) const;
 };
 
 
