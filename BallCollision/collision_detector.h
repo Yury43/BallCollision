@@ -134,9 +134,8 @@ private:
     }
 };
 
-// struct Quadrant;
 
-
+// stores LTRB, more mem, less math
 template<typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
 struct Quadrant
 {
@@ -146,28 +145,17 @@ struct Quadrant
 
     Quadrant() = default;
 
-    Quadrant(const T l_, const T t_, const T r_, const T b_)
-    :
-        l(l_),
-        t(t_),
-        r(r_),
-        b(b_)
-    {}
+    Quadrant(const T l_, const T t_, const T r_, const T b_) : l(l_), t(t_), r(r_), b(b_) {}
     
-    std::optional<Quadrant> overlap(const Quadrant & other) const
+    bool intersects(const Quadrant & other) const
     {
-        if (other.l > r || other.t > b || other.r < l || other.b < t)
-        {
-            return std::nullopt;
-        }
-
-        return std::optional<Quadrant>{{
-            std::max<T>(l, other.l),
-            std::max<T>(t, other.t),
-            std::min<T>(r, other.r),
-            std::min<T>(b, other.b),
-        }};
+        return other.l < r && other.t < b && other.r > l && other.b > t;
     }
+
+    bool contains(const T x, const T y) const 
+    {
+        return l <= x && x <= r && t <= y && y <= b;
+    } 
 
     
 # if __cplusplus >= 20170L
@@ -178,7 +166,7 @@ struct Quadrant
             T mx = (l + r) / 2;
             T my = (t + b) / 2;
             
-            return Subdivision
+            return
             {
                 Quadrant{l, t, mx, my},
                 Quadrant{mx, t, r, my},
@@ -191,7 +179,7 @@ struct Quadrant
             T mx = (l + r) >> 1;
             T my = (t + b) >> 1;
             
-            return Subdivision // for int 
+            return  
             {
                 Quadrant{l, t, mx, my},
                 Quadrant{mx + 1, t, r, my},
@@ -234,13 +222,9 @@ struct Quadrant
     }
 
 #endif
-        
-    bool contains(const T x, const T y) const 
-    {
-        return l <= x && x <= r && t <= y && y <= b;
-    } 
 };
 
+// stores center and halve the width of a square, less mem, more math 
 template<typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
 struct CenteredQuadrant
 {
@@ -260,35 +244,28 @@ struct CenteredQuadrant
     :
         cx((l_ + r_) / 2),
         cy((t_ + b_) / 2),
-        w2(std::max(r_ - l_, b_ - t_))
+        w2(std::max(r_ - l_, b_ - t_) / 2)
     {
         
     }
     
-    std::optional<CenteredQuadrant> overlap(const CenteredQuadrant & other) const
+    bool intersects(const CenteredQuadrant & other) const
     {
-        if (std::abs(cx - other.cx) > w2 + other.w2 || std::abs(cy - other.cy) > w2 + other.w2)
-        {
-            return std::nullopt;
-        }
-        
-        T l = std::max<T>(cx - w2, other.cx - other.w2);
-        T t = std::max<T>(cy - w2, other.cy - other.w2);
-        T r = std::min<T>(cx + w2, other.cx + other.w2);
-        T b = std::min<T>(cy + w2, other.cy + other.w2);
-
-        return {{
-            (r + l) / 2, // cxi,
-            (t + b) / 2, // cyi,
-            (r - l) / 2, // w2i
-        }};
+        return std::abs(cx - other.cx) <= w2 + other.w2 && std::abs(cy - other.cy) <= w2 + other.w2;
     }
 
+    bool contains(const T x, const T y) const 
+    {
+        return std::abs(cx - x) <= w2 && std::abs(cy - y) <= w2;
+    } 
     
     Subdivision divide() const 
     {
         T w4 = w2 / 2;
-        T cxl = cx - w4, cxr = cx + w4, cyt = cy - w4, cyb = cy + w4;
+        T cxl = cx - w4;
+        T cxr = cx + w4;
+        T cyt = cy - w4;
+        T cyb = cy + w4;
     
         return Subdivision
         {
@@ -298,11 +275,6 @@ struct CenteredQuadrant
             CenteredQuadrant{cxl, cyb, w4},
         };
     }
-        
-    bool contains(const T x, const T y) const 
-    {
-        return std::abs(cx - x) <= w2 && std::abs(cy - y) <= w2;
-    } 
 };
 
 class LazyQuadTreeNode
@@ -364,9 +336,9 @@ public:
     /* int speedup is not too great but creates a risk of content collisions when going too deep,
      * requiring the ability to store multiple content elements inside a single node */
     
-    typedef Quadrant<int> Quad;
-    // typedef Quadrant<float> Quad;
-    // typedef CenteredQuadrant<float> Quad;
+    // typedef Quadrant<int> Quad;
+    typedef Quadrant<float> Quad; 
+    // typedef CenteredQuadrant<float> Quad; // appears to be slower 
     
     LightQuadTreeNode() = default;
     explicit LightQuadTreeNode(const Quad & q_) : quadrant(q_) {}
@@ -382,7 +354,7 @@ private:
 
     Quad quadrant;
     
-    int first_leaf = -1;
+    int first_leaf = -1; // we dont need to store all the leafs, they are 
 
     const Physical* content = nullptr;
 

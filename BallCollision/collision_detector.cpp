@@ -199,12 +199,9 @@ void LazyQuadTreeNode::query_range(const Quad & loc, std::vector<const Physical*
     
     for (int i = 0; i < 4; ++i)
     {
-        std::optional<Quad> intersection = subquadrants[i].overlap(loc);
-        if (intersection.has_value())
-        {
+        if (subquadrants[i].intersects(loc))
             if (leaves[i])
-                leaves[i]->query_range(intersection.value(), collection);
-        }
+                leaves[i]->query_range(loc, collection);
     }
 }
 
@@ -270,9 +267,6 @@ void LightQuadTree::query_range(const int pos, const Quad & loc, std::vector<con
     
     Quad::Subdivision sub = nodes[pos].quadrant.divide();
     for (int i = 0; i < 4; ++i)
-    {
-        std::optional<Quad> intersection = sub[i].overlap(loc);
-        if (intersection.has_value())
-            query_range(nodes[pos].first_leaf + i, intersection.value(), collection);
-    }
+        if (sub[i].intersects(loc))
+            query_range(nodes[pos].first_leaf + i, loc, collection);
 }
