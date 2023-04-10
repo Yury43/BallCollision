@@ -35,7 +35,7 @@ void QuadTree::detect_collisions(
     std::vector<const Physical*> proxy;
     // proxy.reserve(proxy_reserve);
     
-    quad_tree_root.collect_proxy(that->p, max_span * 2, proxy);
+    quad_tree_root.query_range(that->p, max_span * 2, proxy);
 
     proxy_reserve = (proxy_reserve * 2 + proxy.size()) / 3;
     
@@ -43,8 +43,8 @@ void QuadTree::detect_collisions(
     {
         if (that->id != other->id)
         {
-            if (collision_test_counter != nullptr)
-                (*collision_test_counter)++;
+            // if (collision_test_counter != nullptr)
+                // (*collision_test_counter)++;
             
             if (that->is_touching(other))
             {
@@ -69,7 +69,7 @@ LightQuadTree::LightQuadTree(const std::vector<std::shared_ptr<Physical>>& objec
 : max_span(calc_max_object_span(objects))
 {
     // nodes.reserve(objects.size());
-    create_new_node({0, 0, WINDOW_X, WINDOW_X});
+    create_new_node({0, 0, WINDOW_X, WINDOW_Y});
 }
 
 void LightQuadTree::detect_collisions(
@@ -80,7 +80,7 @@ void LightQuadTree::detect_collisions(
     std::vector<const Physical*> proxy;
     // proxy.reserve(proxy_reserve);
     
-    collect_proxy(0, that->p, max_span * 2, proxy);
+    query_range(0, that->p, that->span() + max_span, proxy);
 
     proxy_reserve = (proxy_reserve * 2 + proxy.size()) / 3;
     
@@ -88,8 +88,8 @@ void LightQuadTree::detect_collisions(
     {
         if (that->id != other->id)
         {
-            if (collision_test_counter != nullptr)
-                (*collision_test_counter)++;
+            // if (collision_test_counter != nullptr)
+                // (*collision_test_counter)++;
             
             if (that->is_touching(other))
             {
@@ -102,8 +102,7 @@ void LightQuadTree::detect_collisions(
 }
 
 
-
-// subquadrants are init initialized on purpose 
+// subquadrants are not initialized on purpose 
 LazyQuadTreeNode::LazyQuadTreeNode(const Quad & q_) :
 quadrant(q_)
 // , subquadrants(q_.divide())
@@ -178,9 +177,9 @@ size_t LazyQuadTreeNode::count_items() const
     return size;
 }
 
-void LazyQuadTreeNode::collect_proxy(const sf::Vector2f & loc, const float R, std::vector<const Physical*>& collection) const
+void LazyQuadTreeNode::query_range(const sf::Vector2f & loc, const float R, std::vector<const Physical*>& collection) const
 {
-    collect_proxy(Quad{
+    query_range(Quad{
         loc.x - R,
         loc.y - R,
         loc.x + R,
@@ -190,7 +189,7 @@ void LazyQuadTreeNode::collect_proxy(const sf::Vector2f & loc, const float R, st
 }
 
 
-void LazyQuadTreeNode::collect_proxy(const Quad & loc, std::vector<const Physical*>& collection) const
+void LazyQuadTreeNode::query_range(const Quad & loc, std::vector<const Physical*>& collection) const
 {
     if (content)
     {
@@ -200,19 +199,13 @@ void LazyQuadTreeNode::collect_proxy(const Quad & loc, std::vector<const Physica
     
     for (int i = 0; i < 4; ++i)
     {
-        Quad intersection = {};
-        if (subquadrants[i].overlap(loc, intersection))
+        std::optional<Quad> intersection = subquadrants[i].overlap(loc);
+        if (intersection.has_value())
         {
             if (leaves[i])
-                leaves[i]->collect_proxy(intersection, collection);
+                leaves[i]->query_range(intersection.value(), collection);
         }
     }
-}
-
-LightQuadTreeNode::LightQuadTreeNode(const Quad & q_) :
-quadrant(q_)
-{
-    assert(quadrant.l < quadrant.r && quadrant.t < quadrant.b);
 }
 
 int LightQuadTree::get_next_node(const int pos, const sf::Vector2f loc)
@@ -258,20 +251,13 @@ void LightQuadTree::push(const int pos, const Physical* item)
     push(get_next_node(pos, item->p), item);
 }
 
-void LightQuadTree::collect_proxy(const int pos, const sf::Vector2f & loc, const float R, std::vector<const Physical*>& collection) const
+void LightQuadTree::query_range(const int pos, const sf::Vector2f & loc, const float R, std::vector<const Physical*>& collection) const
 {
-    collect_proxy(pos,
-                  Quad(
-                     loc.x - R,
-                     loc.y - R,
-                     loc.x + R,
-                     loc.y + R
-                     ),
-                     collection);
+    query_range(pos, Quad(loc.x - R,loc.y - R,loc.x + R, loc.y + R), collection);
 }
 
 
-void LightQuadTree::collect_proxy(const int pos, const Quad & loc, std::vector<const Physical*>& collection) const
+void LightQuadTree::query_range(const int pos, const Quad & loc, std::vector<const Physical*>& collection) const
 {
     if (nodes[pos].content)
     {
@@ -285,8 +271,8 @@ void LightQuadTree::collect_proxy(const int pos, const Quad & loc, std::vector<c
     Quad::Subdivision sub = nodes[pos].quadrant.divide();
     for (int i = 0; i < 4; ++i)
     {
-        Quad intersection = {};
-        if (sub[i].overlap(loc, intersection))
-            collect_proxy(nodes[pos].first_leaf + i, intersection, collection);
+        std::optional<Quad> intersection = sub[i].overlap(loc);
+        if (intersection.has_value())
+            query_range(nodes[pos].first_leaf + i, intersection.value(), collection);
     }
 }

@@ -19,9 +19,15 @@ inline float norm(const sf::Vector2f& a)
     return std::sqrtf(dot(a, a));
 }
 
+
 inline float dist(const sf::Vector2f& a, const sf::Vector2f& b)
 {
     return norm(a - b);
+}
+
+inline float dist_squared(const sf::Vector2f& a, const sf::Vector2f& b)
+{
+    return (a.x - b.x) * (a.x - b.x) + (a.y - b.y) * (a.y - b.y);
 }
 
 inline sf::Vector2f normalized(const sf::Vector2f& a)

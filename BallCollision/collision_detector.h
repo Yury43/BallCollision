@@ -2,6 +2,7 @@
 #include <memory>
 #include <array>
 #include <iostream>
+#include <optional>
 
 #include "constants.h"
 #include "physicals.h"
@@ -9,6 +10,24 @@
 
 class CollisionDetector
 {
+public:
+    
+    CollisionDetector() = default;
+    virtual ~CollisionDetector() = default;
+    
+    CollisionDetector(const CollisionDetector&) = delete;
+    CollisionDetector(CollisionDetector &&) = delete;
+    CollisionDetector& operator =(CollisionDetector &&) = delete;
+    // CollisionDetector operator =(CollisionDetector) = delete;
+    auto operator=(const CollisionDetector &) -> CollisionDetector & = delete;
+
+    
+    virtual void detect_collisions(
+        const Physical* ball,
+        std::vector<std::pair<uint32_t, uint32_t>>& colliding_pairs,
+        int* collision_test_counter = nullptr
+    ) = 0;
+
 protected:
     
     template<typename T>
@@ -17,16 +36,6 @@ protected:
         return objects.empty() ? 0 :
         (*std::max_element(objects.begin(), objects.end(), [](const auto& a, const auto& b) { return a->span() < b->span(); }))->span();
     }
-    
-public:
-    
-    virtual ~CollisionDetector() = default;
-    
-    virtual void detect_collisions(
-        const Physical* ball,
-        std::vector<std::pair<uint32_t, uint32_t>>& colliding_pairs,
-        int* collision_test_counter = nullptr
-    ) = 0;
 };
 
 
@@ -87,8 +96,8 @@ public:
                 {
                     if (that->id != other->id)
                     {
-                        if (collision_test_counter != nullptr)
-                            (*collision_test_counter)++;
+                        // if (collision_test_counter != nullptr)
+                            // (*collision_test_counter)++;
                     
                         if (that->is_touching(other.get()))
                         {
@@ -145,32 +154,30 @@ struct Quadrant
         b(b_)
     {}
     
-    bool overlap(const Quadrant & other, Quadrant & intersection) const
+    std::optional<Quadrant> overlap(const Quadrant & other) const
     {
         if (other.l > r || other.t > b || other.r < l || other.b < t)
         {
-            return false;
+            return std::nullopt;
         }
 
-        intersection = {
+        return std::optional<Quadrant>{{
             std::max<T>(l, other.l),
             std::max<T>(t, other.t),
             std::min<T>(r, other.r),
             std::min<T>(b, other.b),
-        };
-    
-        return true;
+        }};
     }
 
     
 # if __cplusplus >= 20170L
-    [[nodiscard]] Subdivision divide() const 
+    Subdivision divide() const 
     {
-        T mx = (l + r) / 2;
-        T my = (t + b) / 2;
-    
-        if constexpr (std::is_floating_point<T>::value)
+        if constexpr (std::is_floating_point_v<T>)
         {
+            T mx = (l + r) / 2;
+            T my = (t + b) / 2;
+            
             return Subdivision
             {
                 Quadrant{l, t, mx, my},
@@ -181,6 +188,9 @@ struct Quadrant
         }
         else
         {
+            T mx = (l + r) >> 1;
+            T my = (t + b) >> 1;
+            
             return Subdivision // for int 
             {
                 Quadrant{l, t, mx, my},
@@ -225,12 +235,75 @@ struct Quadrant
 
 #endif
         
-    [[nodiscard]] bool contains(const T x, const T y) const 
+    bool contains(const T x, const T y) const 
     {
         return l <= x && x <= r && t <= y && y <= b;
     } 
 };
 
+template<typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
+struct CenteredQuadrant
+{
+    typedef std::array<CenteredQuadrant, 4> Subdivision;
+    
+    T cx, cy, w2;
+
+    CenteredQuadrant() = default;
+
+    CenteredQuadrant(const T cx_, const T cy_, const T w_)
+    : cx(cx_), cy(cy_), w2(w_)
+    {
+        
+    }
+    
+    CenteredQuadrant(const T l_, const T t_, const T r_, const T b_)
+    :
+        cx((l_ + r_) / 2),
+        cy((t_ + b_) / 2),
+        w2(std::max(r_ - l_, b_ - t_))
+    {
+        
+    }
+    
+    std::optional<CenteredQuadrant> overlap(const CenteredQuadrant & other) const
+    {
+        if (std::abs(cx - other.cx) > w2 + other.w2 || std::abs(cy - other.cy) > w2 + other.w2)
+        {
+            return std::nullopt;
+        }
+        
+        T l = std::max<T>(cx - w2, other.cx - other.w2);
+        T t = std::max<T>(cy - w2, other.cy - other.w2);
+        T r = std::min<T>(cx + w2, other.cx + other.w2);
+        T b = std::min<T>(cy + w2, other.cy + other.w2);
+
+        return {{
+            (r + l) / 2, // cxi,
+            (t + b) / 2, // cyi,
+            (r - l) / 2, // w2i
+        }};
+    }
+
+    
+    Subdivision divide() const 
+    {
+        T w4 = w2 / 2;
+        T cxl = cx - w4, cxr = cx + w4, cyt = cy - w4, cyb = cy + w4;
+    
+        return Subdivision
+        {
+            CenteredQuadrant{cxl, cyt, w4},
+            CenteredQuadrant{cxr, cyt, w4},
+            CenteredQuadrant{cxr, cyb, w4},
+            CenteredQuadrant{cxl, cyb, w4},
+        };
+    }
+        
+    bool contains(const T x, const T y) const 
+    {
+        return std::abs(cx - x) <= w2 && std::abs(cy - y) <= w2;
+    } 
+};
 
 class LazyQuadTreeNode
 {
@@ -244,8 +317,8 @@ public:
 
     size_t count_nodes() const ;
     size_t count_items() const ;
-    void collect_proxy(const sf::Vector2f & loc, float R, std::vector<const Physical*>& collection) const;
-    void collect_proxy(const Quad & loc, std::vector<const Physical*>& collection) const;
+    void query_range(const sf::Vector2f & loc, float R, std::vector<const Physical*>& collection) const;
+    void query_range(const Quad & loc, std::vector<const Physical*>& collection) const;
     
 private:
 
@@ -284,15 +357,20 @@ private:
 };
 
 
-// subquadrants are not initialized intentionally
+// quadrant is not initialized intentionally, to create node before knowing it 
 class LightQuadTreeNode
 {
 public:
-    typedef Quadrant<float> Quad;
-    // typedef Quadrant<int> Quad; // speedup is not too great 
+    /* int speedup is not too great but creates a risk of content collisions when going too deep,
+     * requiring the ability to store multiple content elements inside a single node */
+    
+    typedef Quadrant<int> Quad;
+    // typedef Quadrant<float> Quad;
+    // typedef CenteredQuadrant<float> Quad;
     
     LightQuadTreeNode() = default;
-    explicit LightQuadTreeNode(const Quad & q_);
+    explicit LightQuadTreeNode(const Quad & q_) : quadrant(q_) {}
+    explicit LightQuadTreeNode(Quad & q_) : quadrant(q_) {}
     
     LightQuadTreeNode(const LightQuadTreeNode& _) = default;
     LightQuadTreeNode(LightQuadTreeNode &&_) = default;
@@ -303,6 +381,7 @@ public:
 private:
 
     Quad quadrant;
+    
     int first_leaf = -1;
 
     const Physical* content = nullptr;
@@ -318,6 +397,7 @@ public:
     using Quad = LightQuadTreeNode::Quad;
     
     explicit  LightQuadTree(const std::vector<std::shared_ptr<Physical>> & objects) ;
+    
     LightQuadTree(const LightQuadTree& _) = delete;
     LightQuadTree(LightQuadTree &&_) = delete;
     LightQuadTree& operator =(LightQuadTree && _) = delete;
@@ -340,8 +420,8 @@ private:
     int create_new_node(const Quad& q);
     int get_next_node(int pos, sf::Vector2f loc);
     void push(int pos, const Physical* item);
-    void collect_proxy(int pos, const sf::Vector2f & loc, float R, std::vector<const Physical*>& collection) const;
-    void collect_proxy(int pos, const Quad & loc, std::vector<const Physical*>& collection) const;
+    void query_range(int pos, const sf::Vector2f & loc, float R, std::vector<const Physical*>& collection) const;
+    void query_range(int pos, const Quad & loc, std::vector<const Physical*>& collection) const;
 };
 
 
