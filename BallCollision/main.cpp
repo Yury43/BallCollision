@@ -26,7 +26,6 @@ int main()
     window.setFramerateLimit(TARGET_FRAMERATE);
 
     EngineWorker sim(ASYNC_PHYS);
-
     sim.run();
     
     sf::Clock clock;
@@ -45,6 +44,7 @@ int main()
     {
         sf::Event event;
         float poll_start = clock.getElapsedTime().asSeconds();
+        
         while (window.pollEvent(event))
         {
             if (event.type == sf::Event::Closed
@@ -62,14 +62,13 @@ int main()
                 }
             }
         }
+        
         float poll_end = clock.getElapsedTime().asSeconds();
-
         float current_time = clock.getElapsedTime().asSeconds();
         float deltaTime = current_time - last_time;
         float simDeltaTime = deltaTime - (poll_end - poll_start);
         fps_counter.push(1.0f / (current_time - last_time));
         last_time = current_time;
-
 
         if (sim.is_running())
         {
@@ -85,13 +84,12 @@ int main()
                 }
             }
         }
-        
 
         draw_fps(window, fps_counter.getAverage());
         window.display();
 
         auto running_duration = std::chrono::system_clock::now() - start;
-        double running_for_seconds = std::chrono::duration_cast<std::chrono::seconds>(running_duration).count(); 
+        int64_t running_for_seconds = std::chrono::duration_cast<std::chrono::seconds>(running_duration).count(); 
         if (seconds_to_run_limit > 0 && running_for_seconds >= seconds_to_run_limit)
         {
             std::cout << "Have been running for " << running_for_seconds << ", shutting down" << std::endl;

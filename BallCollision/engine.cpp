@@ -31,7 +31,7 @@ Engine::Engine()
 
 std::vector<std::shared_ptr<Physical>> Engine::run_iteration(const float delta_time)
 {
-    PROFILE("Engine::run_iteration");
+    PROFILE_NAMED("Engine::run_iteration");
     
     if (objects.empty())
     {
@@ -49,15 +49,16 @@ std::vector<std::shared_ptr<Physical>> Engine::run_iteration(const float delta_t
         // QuadTree collision_detector(objects);
         LightQuadTree collision_detector(objects);
         
-        
         std::vector<std::pair<uint32_t, uint32_t>> colliding_pairs;
-
         int collision_test_count = 0;
         
         {
-            PROFILE("Engine::run_iteration");
+            PROFILE_NAMED("Engine::run_iteration");
             for (const auto& item : objects)
             {
+                // PROFILE_NAMED("Engine::run_iteration");
+                // PROFILE();
+                
                 // Test and handle collision with walls 
                 // Wall collisions have higher priority 
                 if (!item->handle_wall_collision(0, 0, WINDOW_X, WINDOW_Y))
@@ -93,9 +94,9 @@ std::vector<std::shared_ptr<Physical>> Engine::run_iteration(const float delta_t
 
         std::vector<Collision> new_collisions;
 
-        for (std::pair<const int, std::vector<int>>& collision_set : colliding_sets.sets_by_parent())
+        for (auto& [fst, snd] : colliding_sets.sets_by_parent())
         {
-            int selected_pair_id = collision_set.second[rand_gen() % collision_set.second.size()];
+            int selected_pair_id = snd[rand_gen() % snd.size()];
         
             std::pair<int, int> selected_pair = colliding_pairs[selected_pair_id];
 
@@ -124,7 +125,7 @@ std::vector<std::shared_ptr<Physical>> Engine::run_iteration(const float delta_t
             double total_energy = std::accumulate(objects.begin(), objects.end(), 0., [](double sum, const auto& item) {
                 auto ball = dynamic_cast<Ball*>(item.get());
                 return ball ? sum + ball->energy() : sum;
-                });
+            });
 
             if (initial_energy < 0)
             {
@@ -144,6 +145,7 @@ std::vector<std::shared_ptr<Physical>> Engine::run_iteration(const float delta_t
                         << std::endl;
                 }
             }
+            
             total_energy_prev = total_energy;
         }
     }

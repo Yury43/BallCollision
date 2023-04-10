@@ -104,7 +104,7 @@ inline void init_snooker(std::vector<std::shared_ptr<Physical>>& objects)
 
     for (int j = 2; j <= 5; ++j)
     {
-        float sign = j % 2 == 0 ? 1 : -1;
+        float sign = j % 2 == 0 ? 1.f : -1.f;
 
         ball.p.x -= R * 2 * std::cos(M_PI / 6);
         ball.p.y += R * 3 * sign;

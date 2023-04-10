@@ -44,7 +44,13 @@ std::string inline clean_func_name(const std::string & func_name)
 #define CAT_(a, b) a ## b
 #define CAT(a, b) CAT_(a, b)
 #define VARNAME_LINE_ID(Var) CAT(Var, __LINE__)
-#define PROFILE() ProfilingTimer VARNAME_LINE_ID(timer)(clean_func_name(std::string(__FUNCDNAME__)) + ":" + std::to_string(__LINE__))
-#define PROFILE_NAMED(NAME) ProfilingTimer VARNAME_LINE_ID(timer)(NAME + ":" + std::to_string(__LINE__))
+
+// about 1.5 times faster than PROFILE() 
+#define PROFILE_NAMED(NAME) ProfilingTimer VARNAME_LINE_ID(timer)(std::string(NAME) + ":" + std::to_string(__LINE__))
+
+#define PROFILE() PROFILE_NAMED(__FUNCDNAME__)
+
+
+
 // #define PROFILE() ProfilingTimer VARNAME_LINE_ID(timer)(std::string(__FUNCDNAME__) + ":" + std::to_string(__LINE__))
 // #define PROFILE(STR) ProfilingTimer VARNAME_LINE_ID(timer) ((std::string(STR)))

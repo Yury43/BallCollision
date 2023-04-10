@@ -1,7 +1,6 @@
 
 #include <algorithm>
 #include <iostream>
-#include <cassert>
 #include "physicals.h"
 
 #include "ball.h"
@@ -11,23 +10,17 @@
 uint32_t Physical::next_id = 0;
 
 
-//static bool are_touching(const Line& line, const Ball& ball)
-//{
-//    return norm(project(line, ball.p) - ball.p) <= ball.R;
-//}
-
 constexpr float DELTA = 1e-3f;
 
 
 bool Ball::is_touching(const Physical* other) const
 {
-    if (other->id == this->id)
-        return false;
-
     auto other_ball = dynamic_cast<const Ball*>(other);
     if (other_ball)
     {
-        return dist(p, other_ball->p) < R + other_ball->R + DELTA;
+        // PROFILE_NAMED("is_touching");
+        // return dist(p, other_ball->p) < R + other_ball->R + DELTA;
+        return dist_squared(p, other_ball->p) < (R + other_ball->R + DELTA) * (R + other_ball->R + DELTA);
     }
     throw std::logic_error("Not implemented");
 }
@@ -75,19 +68,19 @@ void Ball::handle_collision(Physical* other)
         auto r1 = p;
         auto r2 = other_ball->p;
         
-        auto R1 = R;
-        auto R2 = other_ball->R;
+        const float & R1 = R;
+        const float & R2 = other_ball->R;
 
-        float m1 = mass();
-        float m2 = other_ball->mass();
+        const float m1 = mass();
+        const float m2 = other_ball->mass();
 
         // calculate velocity deltas 
 
         auto v1 = velocity();
         auto v2 = other_ball->velocity();
 
-        auto r12 = r1 - r2;
-        auto r21 = -r12;
+        const auto r12 = r1 - r2;
+        const auto r21 = -r12;
 
         auto dv1 = v1 - m2 * 2 / (m1 + m2) * dot(v1 - v2, r12) / std::powf(norm(r12), 2) * r12;
         auto dv2 = v2 - m1 * 2 / (m1 + m2) * dot(v2 - v1, r21) / std::powf(norm(r21), 2) * r21;
