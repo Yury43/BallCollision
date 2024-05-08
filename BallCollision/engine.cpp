@@ -2,13 +2,18 @@
 #include <iomanip>
 #include "engine.h"
 
+#include <cassert>
 #include <chrono>
+#include <memory_resource>
+#include <set>
+
 
 #include "scenarios.h"
 #include "disjoined_set_union.h"
 #include "collision.h"
 #include "collision_detector.h"
 #include "profiler.h"
+
 
 
 Engine::Engine()
@@ -28,6 +33,14 @@ Engine::Engine()
     }
 }
 
+template<typename T>
+struct PairComp{
+    inline bool operator()(const std::pair<uint32_t, uint32_t>& lhs, const std::pair<uint32_t, uint32_t>& rhs) const {
+        if (lhs.first != rhs.first)
+            return lhs.first < rhs.first;
+        return lhs.second < rhs.second;
+    }
+};
 
 std::vector<std::shared_ptr<Physical>> Engine::run_iteration(const float delta_time)
 {
@@ -46,16 +59,19 @@ std::vector<std::shared_ptr<Physical>> Engine::run_iteration(const float delta_t
     // Reduce time complexity by placing balls in a grid of bins, only balls in the same bin and its neighbors may interact
 
     {
-        // QuadTree collision_detector(objects);
-        LightQuadTree collision_detector(objects);
+        // QuadTreePvigier collision_detector(objects);
+        // LightQuadTree collision_detector;
+        QuadTree collision_detector;
         
         std::vector<std::pair<uint32_t, uint32_t>> colliding_pairs;
+        std::vector<std::pair<uint32_t, uint32_t>> colliding_pairs2;
         int collision_test_count = 0;
         
         {
             PROFILE_NAMED("Engine::run_iteration");
-            for (const auto& item : objects)
+            for (int i = 0; i < objects.size(); ++i)
             {
+                const auto& item = objects[i];
                 // PROFILE_NAMED("Engine::run_iteration");
                 // PROFILE();
                 
@@ -64,11 +80,73 @@ std::vector<std::shared_ptr<Physical>> Engine::run_iteration(const float delta_t
                 if (!item->handle_wall_collision(0, 0, WINDOW_X, WINDOW_Y))
                 {
                     // Test collision with other balls
-                    collision_detector.detect_collisions(item.get(), colliding_pairs, &collision_test_count);
                 }
+                collision_detector.detect_collisions(item.get(), i, colliding_pairs, &collision_test_count);
+
             }
         }
-        
+
+        if (false)
+        {
+            for (int i = 0; i < objects.size(); ++i)
+            {
+                for (int j = i + 1; j < objects.size(); ++j)
+                {
+                    if (j != i)
+                    {
+                        if (objects[i]->is_touching(objects[j].get()))
+                        {
+                            colliding_pairs2.push_back({
+                                std::min(objects[i]->id, objects[j]->id),
+                                std::max(objects[i]->id, objects[j]->id)
+                            });
+                        }
+                    }
+                }
+            }
+
+            if (colliding_pairs.size() != colliding_pairs2.size())
+            {
+                std::set a(colliding_pairs.begin(), colliding_pairs.end(), PairComp<uint32_t>());
+                std::set b(colliding_pairs2.begin(), colliding_pairs2.end(), PairComp<uint32_t>());
+                std::vector<std::pair<uint32_t, uint32_t>> diff_ab;
+                std::vector<std::pair<uint32_t, uint32_t>> diff_ba;
+                
+                std::set_difference(a.begin(), a.end(), b.begin(), b.end(), std::back_inserter(diff_ab));
+                std::set_difference(b.begin(), b.end(), a.begin(), a.end(), std::back_inserter(diff_ba));
+
+                std::cout << "extra: " << std::endl;
+                for (const auto & p : diff_ab)
+                {
+                    const Ball* b1 = dynamic_cast<const Ball*>(objects_by_id[p.first].get());
+                    const Ball* b2 = dynamic_cast<const Ball*>(objects_by_id[p.second].get());
+                    std::cout << b1->id << "x" << b2->id << "\t";
+                    std::cout << "C1: " << b1->p << "\tR1: " << b1->R << "\t" ;
+                    std::cout << "C2: " << b2->p << "\tR2: " << b2->R << "\t" ;
+                    std::cout << "R12: " << (b1->R + b2->R) << "\t";
+                    std::cout << "dist: " << dist(b1->p, b2->p) << " ";
+                    std::cout << std::endl;
+                }
+
+                std::cout << "missing: " << std::endl;
+                for (const auto & p : diff_ba)
+                {
+                    const Ball* b1 = dynamic_cast<const Ball*>(objects_by_id[p.first].get());
+                    const Ball* b2 = dynamic_cast<const Ball*>(objects_by_id[p.second].get());
+                    std::cout << b1->id << "x" << b2->id << "\t";
+                    std::cout << "C1: " << b1->p << "\tR1: " << b1->R << "\t" ;
+                    std::cout << "C2: " << b2->p << "\tR2: " << b2->R << "\t" ;
+                    std::cout << "R12: " << (b1->R + b2->R) << "\t";
+                    std::cout << "dist: " << dist(b1->p, b2->p) << " ";
+                    std::cout << std::endl;
+                }
+
+                assert(colliding_pairs.size() == colliding_pairs2.size());
+            }
+            
+            assert(colliding_pairs.size() == colliding_pairs2.size());    
+        }
+
         // Find collisions involving same balls 
         
         const int n_colliding_pairs = static_cast<int>(colliding_pairs.size());

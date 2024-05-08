@@ -14,13 +14,13 @@
 inline void init_random(std::vector<std::shared_ptr<Physical>>& objects)
 {
     std::mt19937 rand_gen = RandGen::get();
-    
-    for (int i = 0; i < (rand_gen() % (MAX_BALLS - MIN_BALLS) + MIN_BALLS); i++)
+    int nballs = (rand_gen() % (MAX_BALLS - MIN_BALLS + 1) + MIN_BALLS - 1);
+    for (int i = 0; i <= nballs; i++)
         //for (int i = 0; i < 1; i++)
     {
         Ball ball;
         
-        int r = 5 + rand_gen() % 7;
+        int r = MIN_R + rand_gen() % (MAX_R - MIN_R);
         ball.R = r;
         ball.p.x = (r + rand_gen()) % (WINDOW_X - r); // make sure balls dont spawn on the edges 
         ball.p.y = (r + rand_gen()) % (WINDOW_Y - r);

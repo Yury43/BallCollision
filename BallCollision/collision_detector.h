@@ -1,11 +1,15 @@
 ﻿#pragma once
 #include <memory>
 #include <array>
+#include <cassert>
+#include <functional>
 #include <iostream>
 #include <optional>
 
 #include "constants.h"
 #include "physicals.h"
+#include "pvigier/Box.h"
+#include "pvigier/Quadtree.h"
 
 
 class CollisionDetector
@@ -20,22 +24,43 @@ public:
     CollisionDetector& operator =(CollisionDetector &&) = delete;
     // CollisionDetector operator =(CollisionDetector) = delete;
     auto operator=(const CollisionDetector &) -> CollisionDetector & = delete;
-
     
     virtual void detect_collisions(
         const Physical* ball,
+        const int index, 
         std::vector<std::pair<uint32_t, uint32_t>>& colliding_pairs,
         int* collision_test_counter = nullptr
     ) = 0;
+};
 
-protected:
+
+struct Node
+{
+    quadtree::Box<float> box;
+    std::size_t id;
+};
+
+
+class QuadTreePvigier : CollisionDetector
+{
+public:
     
-    template<typename T>
-    float calc_max_object_span(const std::vector<std::shared_ptr<T>>& objects)
-    {
-        return objects.empty() ? 0 :
-        (*std::max_element(objects.begin(), objects.end(), [](const auto& a, const auto& b) { return a->span() < b->span(); }))->span();
-    }
+    explicit QuadTreePvigier(const std::vector<std::shared_ptr<Physical>> & objects);
+    
+    void detect_collisions(
+        const Physical* ball,
+        const int index, 
+        std::vector<std::pair<uint32_t, uint32_t>>& colliding_pairs,
+        int* collision_test_counter = nullptr
+    ) override;
+
+private:
+    std::function<quadtree::Box<float>(Node*)> getBox;
+
+    std::vector<Node> nodes;
+    std::unique_ptr<quadtree::Quadtree<Node*, decltype(getBox)>> t;
+    quadtree::Box<float> box;
+    
 };
 
 
@@ -77,6 +102,7 @@ public:
     
     void detect_collisions(
         const Physical* that,
+        const int index,
         std::vector<std::pair<uint32_t, uint32_t>>& colliding_pairs,
         int* collision_test_counter = nullptr
 
@@ -149,7 +175,7 @@ struct Quadrant
     
     bool intersects(const Quadrant & other) const
     {
-        return other.l < r && other.t < b && other.r > l && other.b > t;
+        return other.l <= r && other.t <= b && other.r >= l && other.b >= t;
     }
 
     bool contains(const T x, const T y) const 
@@ -158,37 +184,37 @@ struct Quadrant
     } 
 
     
-# if __cplusplus >= 20170L
-    Subdivision divide() const 
-    {
-        if constexpr (std::is_floating_point_v<T>)
-        {
-            T mx = (l + r) / 2;
-            T my = (t + b) / 2;
-            
-            return
-            {
-                Quadrant{l, t, mx, my},
-                Quadrant{mx, t, r, my},
-                Quadrant{mx, my, r, b},
-                Quadrant{l, my, mx, b}
-            };
-        }
-        else
-        {
-            T mx = (l + r) >> 1;
-            T my = (t + b) >> 1;
-            
-            return  
-            {
-                Quadrant{l, t, mx, my},
-                Quadrant{mx + 1, t, r, my},
-                Quadrant{mx + 1, my + 1, r, b},
-                Quadrant{l, my, mx + 1, b}
-            };
-        }
-    }
-#else
+// # if __cplusplus >= 20170L
+//     Subdivision divide() const 
+//     {
+//         if constexpr (std::is_floating_point_v<T>)
+//         {
+//             T mx = (l + r) / 2;
+//             T my = (t + b) / 2;
+//             
+//             return
+//             {
+//                 Quadrant{l, t, mx, my},
+//                 Quadrant{mx, t, r, my},
+//                 Quadrant{mx, my, r, b},
+//                 Quadrant{l, my, mx, b}
+//             };
+//         }
+//         else
+//         {
+//             T mx = (l + r) >> 1;
+//             T my = (t + b) >> 1;
+//             
+//             return  
+//             {
+//                 Quadrant{l, t, mx, my},
+//                 Quadrant{mx + 1, t, r, my},
+//                 Quadrant{mx + 1, my + 1, r, b},
+//                 Quadrant{l, my, mx + 1, b}
+//             };
+//         }
+//     }
+// #else
     template<class Q = T>
     typename std::enable_if<std::is_floating_point<Q>::value, Subdivision>::type
     divide() const 
@@ -221,7 +247,7 @@ struct Quadrant
         };
     }
 
-#endif
+// #endif
 };
 
 // stores center and halve the width of a square, less mem, more math 
@@ -281,24 +307,32 @@ class LazyQuadTreeNode
 {
 public:
     typedef Quadrant<float> Quad;
+    // typedef Quadrant<int> Quad;
     
     explicit LazyQuadTreeNode(const Quad & q_);
     LazyQuadTreeNode* get_next_node(sf::Vector2f loc);
 
-    void push(const Physical* item);
-
+    void add_content(const Physical* item);
+    bool got_content() const;
+    size_t content_size() const;
+    void collect_content(std::vector<const Physical*>& collection) const;
+    void push_current_content();
+    
+    LazyQuadTreeNode* push(const Physical* item);
     size_t count_nodes() const ;
     size_t count_items() const ;
     void query_range(const sf::Vector2f & loc, float R, std::vector<const Physical*>& collection) const;
     void query_range(const Quad & loc, std::vector<const Physical*>& collection) const;
-    
+    const Physical* find_closest(const sf::Vector2f & loc);
+
 private:
 
     Quad quadrant;
     Quad::Subdivision subquadrants;
     std::array<std::unique_ptr<LazyQuadTreeNode>, 4> leaves;
+    bool got_leaves = false;
+    // std::vector<const Physical*> content;
     const Physical* content = nullptr;
-    bool has_leaves = false;
 };
 
 
@@ -308,24 +342,25 @@ class LightQuadTreeNode;
 class QuadTree : public CollisionDetector
 {
 public:
-    explicit QuadTree(const std::vector<std::shared_ptr<Physical>> & objects) ;
+    QuadTree() ;
     QuadTree(const QuadTree& _) = delete;
     QuadTree(QuadTree &&_) = delete;
     QuadTree& operator =(QuadTree && _) = delete;
     QuadTree operator =(const QuadTree & _) = delete;
 
     ~QuadTree() override = default;
-    
+
     void detect_collisions(
         const Physical* that,
+        const int index,
         std::vector<std::pair<uint32_t, uint32_t>>& colliding_pairs,
         int* collision_test_counter = nullptr
     ) override;
     
 private:
     
-    LazyQuadTreeNode quad_tree_root;
-    const float max_span;
+    LazyQuadTreeNode root;
+    float max_span = 0;
 };
 
 
@@ -367,8 +402,8 @@ class LightQuadTree : public CollisionDetector
 public:
 
     using Quad = LightQuadTreeNode::Quad;
-    
-    explicit  LightQuadTree(const std::vector<std::shared_ptr<Physical>> & objects) ;
+
+    LightQuadTree();
     
     LightQuadTree(const LightQuadTree& _) = delete;
     LightQuadTree(LightQuadTree &&_) = delete;
@@ -379,15 +414,16 @@ public:
     
     void detect_collisions(
         const Physical* that,
+        const int index,
         std::vector<std::pair<uint32_t, uint32_t>>& colliding_pairs,
         int* collision_test_counter = nullptr
     ) override;
     
 private:
 
-    std::array<LightQuadTreeNode, static_cast<size_t>(MAX_BALLS * 4)> nodes;
+    std::array<LightQuadTreeNode, static_cast<size_t>(MAX_BALLS * 4 * 2)> nodes;
     int next_placed_node = 0;
-    const float max_span;
+    float max_span = 0;
         
     int create_new_node(const Quad& q);
     int get_next_node(int pos, sf::Vector2f loc);

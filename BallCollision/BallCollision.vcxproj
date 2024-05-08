@@ -166,6 +166,9 @@
     <ClInclude Include="engine_worker.h" />
     <ClInclude Include="engine.h" />
     <ClInclude Include="profiler.h" />
+    <ClInclude Include="quadtree\Box.h" />
+    <ClInclude Include="quadtree\Quadtree.h" />
+    <ClInclude Include="quadtree\Vector2.h" />
     <ClInclude Include="scenarios.h" />
     <ClInclude Include="vector_math.h" />
     <ClInclude Include="MiddleAverageFilter.h" />
