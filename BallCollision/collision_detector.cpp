@@ -8,7 +8,7 @@
 #include "ball.h"
 #include "constants.h"
 #include "profiler.h"
-#include "quadtree/Quadtree.h"
+#include "pvigier/Quadtree.h"
 #include <functional>
 
 QuadTree::QuadTree() :
@@ -24,6 +24,7 @@ void QuadTree::detect_collisions(
     int* collision_test_counter
 ) 
 {
+    // PROFILE_NAMED("detect_collisions");
     std::vector<const Physical*> proxy;
     // proxy.reserve(proxy_reserve);
     // std::cout << "items: " << root.count_items() << "\t" << "nodes: " << root.count_nodes() << std::endl;
@@ -76,6 +77,7 @@ void LightQuadTree::detect_collisions(
     std::vector<std::pair<uint32_t, uint32_t>>& colliding_pairs,
     int* collision_test_counter)
 {
+    PROFILE_NAMED("detect_collisions");
     std::vector<const Physical*> proxy;
     // proxy.reserve(proxy_reserve);
     float thatSpan = that->span();
@@ -186,12 +188,16 @@ QuadTreePvigier::QuadTreePvigier(const std::vector<std::shared_ptr<Physical>>& o
 
 void QuadTreePvigier::detect_collisions(const Physical* ball, const int index, std::vector<std::pair<uint32_t, uint32_t>>& colliding_pairs, int* collision_test_counter)
 {
+    // PROFILE_NAMED("detect_collisions");
     if (box.contains(nodes[index].box))
     {
         std::vector<Node*> intersections = t->query(nodes[index].box);
         for (const auto & it : intersections)
         {
-            colliding_pairs.push_back({ball->id, it->id});
+            if (ball->id != it->id)
+            {
+                colliding_pairs.push_back({std::min<>(ball->id, it->id), std::max(ball->id, it->id)});
+            }
         }    
     }
 }
@@ -232,38 +238,38 @@ LazyQuadTreeNode* LazyQuadTreeNode::get_next_node(const sf::Vector2f loc)
 
 void LazyQuadTreeNode::add_content(const Physical* item)
 {
-    // content.push_back(item);
-    content = item;
+    content.push_back(item);
+    // content = item;
 }
 
 bool LazyQuadTreeNode::got_content() const
 {
-    return content != nullptr;
-    // return !content.empty();
+    // return content != nullptr;
+    return !content.empty();
 }
 
 size_t LazyQuadTreeNode::content_size() const
 {
-    return content != nullptr;
-    // return content.size();
+    // return content != nullptr;
+    return content.size();
 }
 
 void LazyQuadTreeNode::collect_content(std::vector<const Physical*>& collection) const
 {
-    // collection.insert(collection.end(), content.begin(), content.end());
-    collection.push_back(content);
+    collection.insert(collection.end(), content.begin(), content.end());
+    // collection.push_back(content);
 }
 
 void LazyQuadTreeNode::push_current_content()
 {
-    // auto closest = std::move(content);
-    // for (const auto & c : closest)
-    // {
-    //     get_next_node(c->p)->push(c);
-    // }
-    auto closest = content;
-    content = nullptr;
-    get_next_node(closest->p)->push(closest);
+    auto closest = std::move(content);
+    for (const auto & c : closest)
+    {
+        get_next_node(c->p)->push(c);
+    }
+    // auto closest = content;
+    // content = nullptr;
+    // get_next_node(closest->p)->push(closest);
 }
 
 LazyQuadTreeNode* LazyQuadTreeNode::push(const Physical* item)
@@ -283,15 +289,15 @@ LazyQuadTreeNode* LazyQuadTreeNode::push(const Physical* item)
     }
     else
     {
-        // if (quadrant.r - quadrant.l > 2)
+        if (quadrant.r - quadrant.l > 3)
         {
             push_current_content();
             return get_next_node(item->p)->push(item);
         }
-        // else
-        // {
-        //     content.push_back(item);
-        // }
+        else
+        {
+            content.push_back(item);
+        }
     }
     return nullptr;
 }
@@ -358,28 +364,6 @@ void LazyQuadTreeNode::query_range(const Quad & loc, std::vector<const Physical*
     }
 }
 
-const Physical* LazyQuadTreeNode::find_closest(const sf::Vector2f & loc)
-{
-    if (got_content())
-    {
-        return content;
-    }
-    else if (got_leaves)
-    {
-        for (int i = 0; i < 4; ++i)
-        {
-            if (subquadrants[i].contains(loc.x, loc.y))
-            {
-                if (leaves[i])
-                {
-                    return leaves[i]->find_closest(loc);
-                }
-            }
-        }
-    }
-    // assert(false);
-    return nullptr;
-}
 
 
 int LightQuadTree::get_next_node(const int pos, const sf::Vector2f loc)

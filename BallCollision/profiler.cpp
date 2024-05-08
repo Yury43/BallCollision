@@ -76,7 +76,7 @@ void ProfilingTimer::print_stats()
         << std::setw(w) << std::fixed << std::setprecision(precision) << calls << " calls "
         << std::setw(w) << std::fixed << std::setprecision(precision) << avg << " avg "
         << std::setw(w) << std::fixed << std::setprecision(precision) << max << " max "
-        << std::setw(w) << std::fixed << std::setprecision(precision) << min << " min "
+        // << std::setw(w) << std::fixed << std::setprecision(precision) << min << " min "
         << std::setw(w) << std::fixed << std::setprecision(precision) << med << " med "
         << std::endl;
     }

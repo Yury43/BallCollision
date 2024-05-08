@@ -59,11 +59,11 @@ std::vector<std::shared_ptr<Physical>> Engine::run_iteration(const float delta_t
     // Reduce time complexity by placing balls in a grid of bins, only balls in the same bin and its neighbors may interact
 
     {
-        // QuadTreePvigier collision_detector(objects);
         // LightQuadTree collision_detector;
+        // QuadTreePvigier collision_detector(objects);
         QuadTree collision_detector;
         
-        std::vector<std::pair<uint32_t, uint32_t>> colliding_pairs;
+        std::vector<std::pair<uint32_t, uint32_t>> colliding_pairs; 
         std::vector<std::pair<uint32_t, uint32_t>> colliding_pairs2;
         int collision_test_count = 0;
         

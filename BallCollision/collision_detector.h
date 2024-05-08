@@ -37,7 +37,7 @@ public:
 struct Node
 {
     quadtree::Box<float> box;
-    std::size_t id;
+    uint32_t id;
 };
 
 
@@ -306,8 +306,8 @@ struct CenteredQuadrant
 class LazyQuadTreeNode
 {
 public:
-    typedef Quadrant<float> Quad;
-    // typedef Quadrant<int> Quad;
+    // typedef Quadrant<float> Quad;
+    typedef Quadrant<int> Quad;
     
     explicit LazyQuadTreeNode(const Quad & q_);
     LazyQuadTreeNode* get_next_node(sf::Vector2f loc);
@@ -323,7 +323,6 @@ public:
     size_t count_items() const ;
     void query_range(const sf::Vector2f & loc, float R, std::vector<const Physical*>& collection) const;
     void query_range(const Quad & loc, std::vector<const Physical*>& collection) const;
-    const Physical* find_closest(const sf::Vector2f & loc);
 
 private:
 
@@ -331,8 +330,8 @@ private:
     Quad::Subdivision subquadrants;
     std::array<std::unique_ptr<LazyQuadTreeNode>, 4> leaves;
     bool got_leaves = false;
-    // std::vector<const Physical*> content;
-    const Physical* content = nullptr;
+    std::vector<const Physical*> content;
+    // const Physical* content = nullptr;
 };
 
 
