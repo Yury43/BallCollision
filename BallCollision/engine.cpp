@@ -11,23 +11,26 @@
 #include "scenarios.h"
 #include "disjoined_set_union.h"
 #include "collision.h"
-#include "collision_detector.h"
 #include "profiler.h"
+#include "QuadTreeAntymon.h"
+#include "QuadTreeLazy.hpp"
+#include "QuadTreeLight.hpp"
+#include "QuadTreePvigier.h"
 
 
 
 Engine::Engine()
 {
-    init_random(objects);
-    // init_snooker(objects);
+    init_random(agents);
+    // init_snooker(agents);
     
-    //init_corner_bounce(objects);
-    // init_chain(objects);
-    // init_angled1(objects);
-    // init_angled2(objects);
-    // init_size(objects);
+    //init_corner_bounce(agents);
+    // init_chain(agents);
+    // init_angled1(agents);
+    // init_angled2(agents);
+    // init_size(agents);
     
-    for (const auto & item : objects)
+    for (const auto & item : agents)
     {
         objects_by_id[item->id] = item;
     }
@@ -46,7 +49,7 @@ std::vector<std::shared_ptr<Physical>> Engine::run_iteration(const float delta_t
 {
     PROFILE_NAMED("Engine::run_iteration");
     
-    if (objects.empty())
+    if (agents.empty())
     {
         return {};
     }
@@ -59,9 +62,10 @@ std::vector<std::shared_ptr<Physical>> Engine::run_iteration(const float delta_t
     // Reduce time complexity by placing balls in a grid of bins, only balls in the same bin and its neighbors may interact
 
     {
-        // LightQuadTree collision_detector;
-        // QuadTreePvigier collision_detector(objects);
-        QuadTree collision_detector;
+        // QuadTreePvigier collision_detector(agents);
+        // LightQuadTree collision_detector(0, 0, WINDOW_X, WINDOW_X);
+        // LazyQuadTree collision_detector(0, 0, WINDOW_X, WINDOW_X);
+        QuadTreeAntymon collision_detector(0, 0, WINDOW_X, WINDOW_X, 40, 1000);
         
         std::vector<std::pair<uint32_t, uint32_t>> colliding_pairs; 
         std::vector<std::pair<uint32_t, uint32_t>> colliding_pairs2;
@@ -69,36 +73,37 @@ std::vector<std::shared_ptr<Physical>> Engine::run_iteration(const float delta_t
         
         {
             PROFILE_NAMED("Engine::run_iteration");
-            for (int i = 0; i < objects.size(); ++i)
+            for (int i = 0; i < agents.size(); ++i)
             {
-                const auto& item = objects[i];
                 // PROFILE_NAMED("Engine::run_iteration");
                 // PROFILE();
                 
                 // Test and handle collision with walls 
                 // Wall collisions have higher priority 
-                if (!item->handle_wall_collision(0, 0, WINDOW_X, WINDOW_Y))
+                if (!agents[i]->handle_wall_collision(0, 0, WINDOW_X, WINDOW_Y))
                 {
                     // Test collision with other balls
                 }
-                collision_detector.detect_collisions(item.get(), i, colliding_pairs, &collision_test_count);
+                collision_detector.detect_collisions(agents, i, colliding_pairs, &collision_test_count);
 
             }
         }
 
+        std::cout << collision_test_count << std::endl;
+        
         if (false)
         {
-            for (int i = 0; i < objects.size(); ++i)
+            for (int i = 0; i < agents.size(); ++i)
             {
-                for (int j = i + 1; j < objects.size(); ++j)
+                for (int j = i + 1; j < agents.size(); ++j)
                 {
                     if (j != i)
                     {
-                        if (objects[i]->is_touching(objects[j].get()))
+                        if (agents[i]->is_touching(agents[j].get()))
                         {
                             colliding_pairs2.push_back({
-                                std::min(objects[i]->id, objects[j]->id),
-                                std::max(objects[i]->id, objects[j]->id)
+                                std::min(agents[i]->id, agents[j]->id),
+                                std::max(agents[i]->id, agents[j]->id)
                             });
                         }
                     }
@@ -191,7 +196,7 @@ std::vector<std::shared_ptr<Physical>> Engine::run_iteration(const float delta_t
         }
 
         // Apply new reactions
-        for (auto& o : objects)
+        for (auto& o : agents)
         {
             o->apply_reactions();
         }
@@ -200,7 +205,7 @@ std::vector<std::shared_ptr<Physical>> Engine::run_iteration(const float delta_t
         {
             // Calculate total kinetic energy change to control accuracy of simulation 
 
-            double total_energy = std::accumulate(objects.begin(), objects.end(), 0., [](double sum, const auto& item) {
+            double total_energy = std::accumulate(agents.begin(), agents.end(), 0., [](double sum, const auto& item) {
                 auto ball = dynamic_cast<Ball*>(item.get());
                 return ball ? sum + ball->energy() : sum;
             });
@@ -234,8 +239,8 @@ std::vector<std::shared_ptr<Physical>> Engine::run_iteration(const float delta_t
     }
 
     std::vector<std::shared_ptr<Physical>> ready_objects;
-    ready_objects.reserve(objects.size());
-    for (const auto & o : objects)
+    ready_objects.reserve(agents.size());
+    for (const auto & o : agents)
     {
         auto ball_ptr = dynamic_cast<Ball*>(o.get());
         if (ball_ptr)
@@ -250,7 +255,7 @@ std::vector<std::shared_ptr<Physical>> Engine::run_iteration(const float delta_t
 
 void Engine::move_objects(const float deltaTime) const
 {
-    for (auto & item : objects)
+    for (auto & item : agents)
     {
         item->update_position(deltaTime);
     }

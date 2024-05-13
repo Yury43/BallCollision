@@ -2,7 +2,7 @@
 
 #include "physicals.h"
 
-// Collision class considers and handles system of colliding objects as a whole
+// Collision class considers and handles system of colliding agents as a whole
 
 class Collision
 {

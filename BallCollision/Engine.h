@@ -19,7 +19,7 @@ public:
 
 private:
 
-    std::vector<std::shared_ptr<Physical>> objects;
+    std::vector<std::shared_ptr<Physical>> agents;
     std::unordered_map<uint32_t, std::shared_ptr<Physical>> objects_by_id;
     
     double total_energy_prev = -1; // kinetic energy for accuracy validation 

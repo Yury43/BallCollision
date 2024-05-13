@@ -149,26 +149,41 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="antymon\IntList.c" />
+    <ClCompile Include="antymon\Quadtree.c" />
+    <ClCompile Include="BinGrid.cpp" />
     <ClCompile Include="collision.cpp" />
-    <ClCompile Include="collision_detector.cpp" />
     <ClCompile Include="engine.cpp" />
     <ClCompile Include="engine_worker.cpp" />
+    <ClCompile Include="QuadTreeAntymon.cpp" />
+    <ClCompile Include="QuadTreeLazy.cpp" />
+    <ClCompile Include="QuadTreeLight.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="physicals.cpp" />
     <ClCompile Include="profiler.cpp" />
+    <ClCompile Include="QuadTreePvigier.cpp" />
+    <ClCompile Include="QuadTreeQuadrant.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="antymon\IntList.h" />
+    <ClInclude Include="antymon\Quadtree.h" />
     <ClInclude Include="ball.h" />
+    <ClInclude Include="BinGrid.h" />
     <ClInclude Include="collision.h" />
     <ClInclude Include="collision_detector.h" />
     <ClInclude Include="constants.h" />
     <ClInclude Include="disjoined_set_union.h" />
     <ClInclude Include="engine_worker.h" />
     <ClInclude Include="engine.h" />
+    <ClInclude Include="QuadTreeAntymon.h" />
+    <ClInclude Include="QuadTreeLazy.hpp" />
+    <ClInclude Include="QuadTreeLight.hpp" />
     <ClInclude Include="profiler.h" />
-    <ClInclude Include="quadtree\Box.h" />
-    <ClInclude Include="quadtree\Quadtree.h" />
-    <ClInclude Include="quadtree\Vector2.h" />
+    <ClInclude Include="pvigier\Box.h" />
+    <ClInclude Include="pvigier\Quadtree.h" />
+    <ClInclude Include="pvigier\Vector2.h" />
+    <ClInclude Include="QuadTreePvigier.h" />
+    <ClInclude Include="QuadTreeQuadrant.h" />
     <ClInclude Include="scenarios.h" />
     <ClInclude Include="vector_math.h" />
     <ClInclude Include="MiddleAverageFilter.h" />
@@ -176,6 +191,9 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="randgen.h" />
+  </ItemGroup>
+  <ItemGroup>
+    <Content Include="antymon\README.md" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

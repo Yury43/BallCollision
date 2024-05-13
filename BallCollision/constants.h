@@ -2,12 +2,12 @@
 
 #define FIXED_RANDOM_SEED (2)
 
-constexpr int WINDOW_X = 1024;
-constexpr int WINDOW_Y = 768;
+constexpr int WINDOW_X = 1024 * 2;
+constexpr int WINDOW_Y = 768 * 2;
 //constexpr int WINDOW_Y = 1024;
-constexpr int MAX_BALLS = 4000;
-constexpr int MIN_BALLS = 4000;
-constexpr int MIN_R = 5;
+constexpr int MAX_BALLS = 20000;
+constexpr int MIN_BALLS = 20000;
+constexpr int MIN_R = 2;
 constexpr int MAX_R = 12;
 constexpr float M_PI = 3.1415926f;
 constexpr int TARGET_FRAMERATE = 60;
