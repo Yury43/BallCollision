@@ -28,7 +28,7 @@ int LightQuadTree::get_next_node(const int pos, const sf::Vector2f loc)
     return -1;
 }
 
-void LightQuadTree::push(const int pos, const Physical* item)
+void LightQuadTree::push(const int pos, const Collidable* item)
 {
     if (!nodes[pos].content && nodes[pos].first_leaf == -1)
     {
@@ -38,7 +38,7 @@ void LightQuadTree::push(const int pos, const Physical* item)
     
     if (nodes[pos].content)
     {            
-        const Physical* closest = nodes[pos].content;
+        const Collidable* closest = nodes[pos].content;
         nodes[pos].content = nullptr;
         push(get_next_node(pos, closest->p), closest);
     }
@@ -46,7 +46,7 @@ void LightQuadTree::push(const int pos, const Physical* item)
     push(get_next_node(pos, item->p), item);
 }
 
-void LightQuadTree::query_range(const int pos, const sf::Vector2f & loc, const float R, std::vector<const Physical*>& collection) const
+void LightQuadTree::query_range(const int pos, const sf::Vector2f & loc, const float R, std::vector<const Collidable*>& collection) const
 {
     query_range(pos,
         Quad(
@@ -59,7 +59,7 @@ void LightQuadTree::query_range(const int pos, const sf::Vector2f & loc, const f
 }
 
 
-void LightQuadTree::query_range(const int pos, const Quad & loc, std::vector<const Physical*>& collection) const
+void LightQuadTree::query_range(const int pos, const Quad & loc, std::vector<const Collidable*>& collection) const
 {
     if (nodes[pos].content)
     {
@@ -92,14 +92,14 @@ LightQuadTree::LightQuadTree(float l, float t, float r, float b)
 }
 
 void LightQuadTree::detect_collisions(
-    const std::vector<std::shared_ptr<Physical>> & agents,
+    const std::vector<std::shared_ptr<Collidable>> & agents,
     const int index,
     std::vector<std::pair<uint32_t, uint32_t>>& colliding_pairs,
     int* collision_test_counter)
 {
     PROFILE_NAMED("detect_collisions");
-    const Physical* item = agents[index].get();
-    std::vector<const Physical*> proxy;
+    const Collidable* item = agents[index].get();
+    std::vector<const Collidable*> proxy;
     // proxy.reserve(proxy_reserve);
     float thatSpan = item->span();
     // sf::Vector2f c = that->p - sf::Vector2f{ 1, 1 };

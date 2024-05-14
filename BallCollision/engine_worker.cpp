@@ -67,7 +67,7 @@ void EngineWorker::stop()
     }
 }
 
-std::vector<std::shared_ptr<Physical>> EngineWorker::get_update(const float sim_delta_time)
+std::vector<std::shared_ptr<Collidable>> EngineWorker::get_update(const float sim_delta_time)
 {
     if (async_mode)
     {

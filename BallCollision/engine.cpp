@@ -45,7 +45,7 @@ struct PairComp{
     }
 };
 
-std::vector<std::shared_ptr<Physical>> Engine::run_iteration(const float delta_time)
+std::vector<std::shared_ptr<Collidable>> Engine::run_iteration(const float delta_time)
 {
     PROFILE_NAMED("Engine::run_iteration");
     
@@ -64,8 +64,8 @@ std::vector<std::shared_ptr<Physical>> Engine::run_iteration(const float delta_t
     {
         // QuadTreePvigier collision_detector(agents);
         // LightQuadTree collision_detector(0, 0, WINDOW_X, WINDOW_X);
-        // LazyQuadTree collision_detector(0, 0, WINDOW_X, WINDOW_X);
-        QuadTreeAntymon collision_detector(0, 0, WINDOW_X, WINDOW_X, 40, 1000);
+        LazyQuadTree collision_detector(0, 0, WINDOW_X, WINDOW_X);
+        // QuadTreeAntymon collision_detector(0, 0, WINDOW_X, WINDOW_X, 40, 1000);
         
         std::vector<std::pair<uint32_t, uint32_t>> colliding_pairs; 
         std::vector<std::pair<uint32_t, uint32_t>> colliding_pairs2;
@@ -84,8 +84,9 @@ std::vector<std::shared_ptr<Physical>> Engine::run_iteration(const float delta_t
                 {
                     // Test collision with other balls
                 }
+                
                 collision_detector.detect_collisions(agents, i, colliding_pairs, &collision_test_count);
-
+                collision_detector.add(agents[i].get());
             }
         }
 
@@ -238,7 +239,7 @@ std::vector<std::shared_ptr<Physical>> Engine::run_iteration(const float delta_t
         move_objects(delta_time);
     }
 
-    std::vector<std::shared_ptr<Physical>> ready_objects;
+    std::vector<std::shared_ptr<Collidable>> ready_objects;
     ready_objects.reserve(agents.size());
     for (const auto & o : agents)
     {

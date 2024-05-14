@@ -31,7 +31,7 @@ private:
     
     int first_leaf = -1; // we dont need to store all the leafs, they are 
 
-    const Physical* content = nullptr;
+    const Collidable* content = nullptr;
 
     friend class LightQuadTree;
 };
@@ -53,7 +53,7 @@ public:
     ~LightQuadTree() override = default;
     
     void detect_collisions(
-        const std::vector<std::shared_ptr<Physical>> & agents,
+        const std::vector<std::shared_ptr<Collidable>> & agents,
         const int index,
         std::vector<std::pair<uint32_t, uint32_t>>& colliding_pairs,
         int* collision_test_counter = nullptr
@@ -67,7 +67,7 @@ private:
         
     int create_new_node(const Quad& q);
     int get_next_node(int pos, sf::Vector2f loc);
-    void push(int pos, const Physical* item);
-    void query_range(int pos, const sf::Vector2f & loc, float R, std::vector<const Physical*>& collection) const;
-    void query_range(int pos, const Quad & loc, std::vector<const Physical*>& collection) const;
+    void push(int pos, const Collidable* item);
+    void query_range(int pos, const sf::Vector2f & loc, float R, std::vector<const Collidable*>& collection) const;
+    void query_range(int pos, const Quad & loc, std::vector<const Collidable*>& collection) const;
 };

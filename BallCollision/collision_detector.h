@@ -1,7 +1,5 @@
 ﻿#pragma once
 #include <memory>
-#include <array>
-#include <iostream>
 #include <optional>
 
 #include "physicals.h"
@@ -21,11 +19,13 @@ public:
     auto operator=(const CollisionDetector &) -> CollisionDetector & = delete;
     
     virtual void detect_collisions(
-        const std::vector<std::shared_ptr<Physical>> & agents,
+        const std::vector<std::shared_ptr<Collidable>> & agents,
         const int index,
         std::vector<std::pair<uint32_t, uint32_t>>& colliding_pairs,
         int* collision_test_counter = nullptr
     ) = 0;
+
+    virtual void add(const Collidable* c) = 0;
 };
 
 

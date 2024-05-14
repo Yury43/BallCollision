@@ -6,23 +6,23 @@
 
 // Abstract physical object parenting Ball and (previously) Line 
 
-class Physical
+class Collidable
 {
 public:
     const uint32_t id;
     sf::Vector2f p = { 0, 0 };
     
-    Physical() : id(next_id++) { }
+    Collidable() : id(next_id++) { }
 
-    Physical(const Physical &_) = delete;
-    Physical(Physical &&_) = delete;
+    Collidable(const Collidable &_) = delete;
+    Collidable(Collidable &&_) = delete;
     
-    virtual ~Physical() = default;
+    virtual ~Collidable() = default;
 
-    virtual bool is_touching(const Physical* other) const = 0;
+    virtual bool is_touching(const Collidable* other) const = 0;
     virtual float span() const = 0;
     
-    virtual void handle_collision(Physical* other) = 0;
+    virtual void handle_collision(Collidable* other) = 0;
     virtual void update_position(float deltaTime) = 0;
     virtual void apply_reactions() = 0;
     virtual bool handle_wall_collision(float left, float top, float right, float bottom) = 0;
@@ -33,11 +33,7 @@ public:
 protected:
 
     // The result of collision applied on object
-    struct Reaction
-    {
-        sf::Vector2f velocity = { 0, 0 };
-        sf::Vector2f corrected_position = { 0, 0 };
-    };
+
 
     
 private:

@@ -7,13 +7,13 @@
 #include "profiler.h"
 #include "vector_math.h"
 
-uint32_t Physical::next_id = 0;
+uint32_t Collidable::next_id = 0;
 
 
 constexpr float DELTA = 1e-3f;
 
 
-bool Ball::is_touching(const Physical* other) const
+bool Ball::is_touching(const Collidable* other) const
 {
     auto other_ball = dynamic_cast<const Ball*>(other);
     if (other_ball)
@@ -60,7 +60,7 @@ void Ball::apply_reactions()
     dir = normalized(v2);
 }
 
-void Ball::handle_collision(Physical* other)
+void Ball::handle_collision(Collidable* other)
 {
     auto other_ball = dynamic_cast<Ball*>(other);
     if (other_ball)
@@ -202,7 +202,7 @@ bool Ball::handle_wall_collision(const float left, const float top, const float 
     return collided;
 }
 
-//bool Line::is_touching(const Physical* other) const
+//bool Line::is_touching(const Collidable* other) const
 //{
 //    const Ball* other_as_ball = dynamic_cast<const Ball*>(other);
 //    if (other_as_ball != nullptr)
@@ -213,7 +213,7 @@ bool Ball::handle_wall_collision(const float left, const float top, const float 
 //}
 //
 //
-//void Line::handle_collision(Physical* other)
+//void Line::handle_collision(Collidable* other)
 //{
 //    auto other_line = dynamic_cast<Line*>(other);
 //    if (other_line != nullptr)

@@ -17,17 +17,17 @@ QuadTreeAntymon::~QuadTreeAntymon()
 }
 
 void QuadTreeAntymon::detect_collisions(
-    const std::vector<std::shared_ptr<Physical>> & agents,
+    const std::vector<std::shared_ptr<Collidable>> & agents,
     const int index,
     std::vector<std::pair<uint32_t, uint32_t>>& colliding_pairs,
     int* collision_test_counter)
 {
     // PROFILE_NAMED("detect_collisions");
-    std::vector<const Physical*> proxy;
+    std::vector<const Collidable*> proxy;
     // proxy.reserve(proxy_reserve);
     // std::cout << "items: " << root.count_items() << "\t" << "nodes: " << root.count_nodes() << std::endl;
 
-    const Physical* item = agents[index].get();
+    const Collidable* item = agents[index].get();
     float r = item->span();
 
     IntList* list = new IntList;
@@ -71,7 +71,7 @@ void QuadTreeAntymon::detect_collisions(
     );
 }
 
-void QuadTreeAntymon::reset_agents(const std::vector<std::shared_ptr<Physical>> & agents)
+void QuadTreeAntymon::reset_agents(const std::vector<std::shared_ptr<Collidable>> & agents)
 {
     PROFILE_NAMED("reset_agents");
     for (int i = 0; i < agents.size(); ++i)

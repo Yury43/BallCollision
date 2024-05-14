@@ -1,5 +1,7 @@
 #pragma once
 
+#include <memory>
+
 #include "physicals.h"
 
 // Collision class considers and handles system of colliding agents as a whole
@@ -10,7 +12,7 @@ public:
 
     const uint64_t cid;
 
-    Collision(const std::shared_ptr<Physical>& p1, const std::shared_ptr<Physical>& p2);
+    Collision(const std::shared_ptr<Collidable>& p1, const std::shared_ptr<Collidable>& p2);
 
     bool are_touching() const;
     void mark_started() const;
@@ -19,10 +21,10 @@ public:
     void handle() const;
 
 private:
-    std::shared_ptr<Physical> party1;
-    std::shared_ptr<Physical> party2;
+    std::shared_ptr<Collidable> party1;
+    std::shared_ptr<Collidable> party2;
 
-    static uint64_t make_id(const std::shared_ptr<Physical>& p1, const std::shared_ptr<Physical>& p2);
+    static uint64_t make_id(const std::shared_ptr<Collidable>& p1, const std::shared_ptr<Collidable>& p2);
 };
 
 // support for std::unordered_* containers 

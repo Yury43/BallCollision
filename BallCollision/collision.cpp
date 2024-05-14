@@ -2,8 +2,8 @@
 
 
 Collision::Collision(
-    const std::shared_ptr<Physical>& p1,
-    const std::shared_ptr<Physical>& p2)
+    const std::shared_ptr<Collidable>& p1,
+    const std::shared_ptr<Collidable>& p2)
     : cid(make_id(p1, p2)), party1(p1), party2(p2)
 {
 
@@ -31,7 +31,7 @@ void Collision::mark_finished() const
     party2->mark_colliding(false);
 }
 
-uint64_t Collision::make_id(const std::shared_ptr<Physical>& p1, const std::shared_ptr<Physical>& p2)
+uint64_t Collision::make_id(const std::shared_ptr<Collidable>& p1, const std::shared_ptr<Collidable>& p2)
 {
     int high = p1->id;
     int low = p2->id;

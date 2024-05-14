@@ -54,7 +54,7 @@ void checkIntersections(std::vector<Node*> nodes1, std::vector<Node*> nodes2)
 }
 
 
-QuadTreePvigier::QuadTreePvigier(const std::vector<std::shared_ptr<Physical>>& objects)
+QuadTreePvigier::QuadTreePvigier(const std::vector<std::shared_ptr<Collidable>>& objects)
 {
     float rad = 0;
 
@@ -90,13 +90,13 @@ QuadTreePvigier::QuadTreePvigier(const std::vector<std::shared_ptr<Physical>>& o
 }
 
 void QuadTreePvigier::detect_collisions(
-    const std::vector<std::shared_ptr<Physical>> & agents,
+    const std::vector<std::shared_ptr<Collidable>> & agents,
     const int index,
     std::vector<std::pair<uint32_t, uint32_t>>& colliding_pairs,
     int* collision_test_counter)
 {
     // PROFILE_NAMED("detect_collisions");
-    const Physical* ball = agents[index].get();
+    const Collidable* ball = agents[index].get();
     if (box.contains(nodes[index].box))
     {
         std::vector<Node*> intersections = t->query(nodes[index].box);

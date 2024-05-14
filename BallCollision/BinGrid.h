@@ -1,6 +1,8 @@
 ﻿#pragma once
 #include "collision_detector.h"
 #include "constants.h"
+#include <iostream>
+
 
 template<class T>
 class BinGrid : public CollisionDetector
@@ -39,14 +41,14 @@ public:
     ~BinGrid() override = default;
     
     void detect_collisions(
-        const std::vector<std::shared_ptr<Physical>> & agents,
+        const std::vector<std::shared_ptr<Collidable>> & agents,
         const int index,
         std::vector<std::pair<uint32_t, uint32_t>>& colliding_pairs,
         int* collision_test_counter = nullptr
 
     ) override 
     {
-        const Physical* that  = agents[index].get();
+        const Collidable* that  = agents[index].get();
         
         int bin_x = find_bin_x(that);
         int bin_y = find_bin_y(that);

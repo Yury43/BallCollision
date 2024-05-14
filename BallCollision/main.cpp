@@ -72,7 +72,7 @@ int main()
 
         if (sim.is_running())
         {
-            std::vector<std::shared_ptr<Physical>> drawables = sim.get_update(simDeltaTime);
+            std::vector<std::shared_ptr<Collidable>> drawables = sim.get_update(simDeltaTime);
 
             if (!drawables.empty())
             {

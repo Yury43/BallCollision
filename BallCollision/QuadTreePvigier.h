@@ -16,10 +16,10 @@ class QuadTreePvigier : CollisionDetector
 {
 public:
     
-    explicit QuadTreePvigier(const std::vector<std::shared_ptr<Physical>> & objects);
+    explicit QuadTreePvigier(const std::vector<std::shared_ptr<Collidable>> & objects);
     
     void detect_collisions(
-        const std::vector<std::shared_ptr<Physical>> & agents,
+        const std::vector<std::shared_ptr<Collidable>> & agents,
         const int index,
         std::vector<std::pair<uint32_t, uint32_t>>& colliding_pairs,
         int* collision_test_counter = nullptr

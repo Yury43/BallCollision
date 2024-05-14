@@ -15,12 +15,12 @@ class Engine
 public:
     Engine();
 
-    std::vector<std::shared_ptr<Physical>> run_iteration(float delta_time);
+    std::vector<std::shared_ptr<Collidable>> run_iteration(float delta_time);
 
 private:
 
-    std::vector<std::shared_ptr<Physical>> agents;
-    std::unordered_map<uint32_t, std::shared_ptr<Physical>> objects_by_id;
+    std::vector<std::shared_ptr<Collidable>> agents;
+    std::unordered_map<uint32_t, std::shared_ptr<Collidable>> objects_by_id;
     
     double total_energy_prev = -1; // kinetic energy for accuracy validation 
     double initial_energy = -1;

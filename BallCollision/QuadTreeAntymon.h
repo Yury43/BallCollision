@@ -9,13 +9,13 @@ public:
     ~QuadTreeAntymon() override;
 
     void detect_collisions(
-        const std::vector<std::shared_ptr<Physical>> & agents,
+        const std::vector<std::shared_ptr<Collidable>> & agents,
         const int index,
         std::vector<std::pair<uint32_t, uint32_t>>& colliding_pairs,
         int* collision_test_counter = nullptr
     ) override;
     
-    void reset_agents(const std::vector<std::shared_ptr<Physical>> & agents);
+    void reset_agents(const std::vector<std::shared_ptr<Collidable>> & agents);
 
 private:
     Quadtree* qt = nullptr;
