@@ -21,7 +21,7 @@ public:
     typedef Quadrant<int> Quad;
     
     explicit LazyQuadTreeNode(const Quad & q_);
-    LazyQuadTreeNode* get_next_node(const float x, const float y);
+    LazyQuadTreeNode* get_next_node(sf::Vector2f loc);
 
     void add_content(const Collidable* item);
     bool got_content() const;
@@ -32,7 +32,7 @@ public:
     LazyQuadTreeNode* push(const Collidable* item);
     size_t count_nodes() const ;
     size_t count_items() const ;
-    void query_range(const float cx, const float cy, float R, std::vector<const Collidable*>& collection) const;
+    void query_range(const sf::Vector2f & loc, float R, std::vector<const Collidable*>& collection) const;
     void query_range(const Quad & loc, std::vector<const Collidable*>& collection) const;
 
 private:

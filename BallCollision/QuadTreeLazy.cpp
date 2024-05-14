@@ -22,7 +22,7 @@ void LazyQuadTree::detect_collisions(
     // std::cout << "items: " << root.count_items() << "\t" << "nodes: " << root.count_nodes() << std::endl;
     const Collidable* item = agents[index].get();
     float that_span = item->span();
-    root.query_range(item->p.x, item->p.y, max_span + that_span, proxy);
+    root.query_range(item->p, max_span + that_span, proxy);
     
     for (const auto & other : proxy)
     {
@@ -56,14 +56,16 @@ quadrant(q_)
     assert(quadrant.l < quadrant.r && quadrant.t < quadrant.b);
 }
 
-LazyQuadTreeNode* LazyQuadTreeNode::get_next_node(const float x, const float y)
+LazyQuadTreeNode* LazyQuadTreeNode::get_next_node(const sf::Vector2f loc)
 {
+    float loc_x = loc.x;
+    float loc_y = loc.y;
 
     // subquadrants = quadrant.divide();
     
     for (int i = 0; i < 4; ++i)
     {
-        if (subquadrants[i].contains(x, y))
+        if (subquadrants[i].contains(loc_x, loc_y))
         {
             if (!leaves[i])
             {
@@ -110,7 +112,7 @@ void LazyQuadTreeNode::push_current_content()
     auto closest = std::move(content);
     for (const auto & c : closest)
     {
-        get_next_node(c->p.x, c->p.y)->push(c);
+        get_next_node(c->p)->push(c);
     }
     // auto closest = content;
     // content = nullptr;
@@ -124,7 +126,7 @@ LazyQuadTreeNode* LazyQuadTreeNode::push(const Collidable* item)
     {
         if (got_leaves)
         {
-            return get_next_node(item->p.x, item->p.x)->push(item);
+            return get_next_node(item->p)->push(item);
         }
         else
         {
@@ -137,7 +139,7 @@ LazyQuadTreeNode* LazyQuadTreeNode::push(const Collidable* item)
         if (quadrant.r - quadrant.l > 3)
         {
             push_current_content();
-            return get_next_node(item->p.x, item->p.y)->push(item);
+            return get_next_node(item->p)->push(item);
         }
         else
         {
@@ -178,13 +180,13 @@ size_t LazyQuadTreeNode::count_items() const
 
 
 
-void LazyQuadTreeNode::query_range(const float cx, const float cy, const float R, std::vector<const Collidable*>& collection) const
+void LazyQuadTreeNode::query_range(const sf::Vector2f & loc, const float R, std::vector<const Collidable*>& collection) const
 {
     query_range(Quad{
-        static_cast<decltype(Quad::l)>(cx - R),
-        static_cast<decltype(Quad::l)>(cy - R),
-        static_cast<decltype(Quad::l)>(cx + R),
-        static_cast<decltype(Quad::l)>(cy + R)}
+        static_cast<decltype(Quad::l)>(loc.x - R),
+        static_cast<decltype(Quad::l)>(loc.y - R),
+        static_cast<decltype(Quad::l)>(loc.x + R),
+        static_cast<decltype(Quad::l)>(loc.y + R)}
         ,
     collection);
 }
