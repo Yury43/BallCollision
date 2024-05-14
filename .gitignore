@@ -4,3 +4,4 @@ x64/Debug/*
 *.idea/*
 BallCollision.sln.DotSettings.user
 /BallCollision/x64
+x64/*
