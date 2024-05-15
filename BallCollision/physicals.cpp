@@ -7,7 +7,7 @@
 #include "profiler.h"
 #include "vector_math.h"
 
-uint32_t Collidable::next_id = 0;
+uint32_t Physical::next_id = 0;
 
 
 constexpr float DELTA = 1e-3f;
@@ -20,7 +20,7 @@ bool Ball::is_touching(const Collidable* other) const
     {
         // PROFILE_NAMED("is_touching");
         // return dist(p, other_ball->p) < R + other_ball->R + DELTA;
-        return dist_squared(p, other_ball->p) < (R + other_ball->R + DELTA) * (R + other_ball->R + DELTA);
+        return dist_squared(p, other_ball->p) < std::powf(R + other_ball->R + DELTA, 2);
     }
     throw std::logic_error("Not implemented");
 }
@@ -60,7 +60,7 @@ void Ball::apply_reactions()
     dir = normalized(v2);
 }
 
-void Ball::handle_collision(Collidable* other)
+void Ball::handle_collision(Physical* other)
 {
     auto other_ball = dynamic_cast<Ball*>(other);
     if (other_ball)
@@ -147,6 +147,16 @@ Ball::Ball(const Ball& other)
     this->reactions = other.reactions;
 }
 
+Ball::Ball(Ball&& other)
+{
+    this->p = other.p;
+    this->dir = other.dir;
+    this->R = other.R;
+    this->speed = other.speed;
+    this->color = other.color;
+    this->reactions = other.reactions;
+}
+
 float Ball::mass() const 
 {
     return R * R * R; // consider mass to be a function of volume just to make interactions a little bit easier to perceive and comprehend
@@ -202,7 +212,7 @@ bool Ball::handle_wall_collision(const float left, const float top, const float 
     return collided;
 }
 
-//bool Line::is_touching(const Collidable* other) const
+//bool Line::is_touching(const Physical* other) const
 //{
 //    const Ball* other_as_ball = dynamic_cast<const Ball*>(other);
 //    if (other_as_ball != nullptr)
@@ -213,7 +223,7 @@ bool Ball::handle_wall_collision(const float left, const float top, const float 
 //}
 //
 //
-//void Line::handle_collision(Collidable* other)
+//void Line::handle_collision(Physical* other)
 //{
 //    auto other_line = dynamic_cast<Line*>(other);
 //    if (other_line != nullptr)

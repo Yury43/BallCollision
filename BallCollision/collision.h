@@ -12,7 +12,7 @@ public:
 
     const uint64_t cid;
 
-    Collision(const std::shared_ptr<Collidable>& p1, const std::shared_ptr<Collidable>& p2);
+    Collision(Physical* p1, Physical* p2);
 
     bool are_touching() const;
     void mark_started() const;
@@ -21,10 +21,10 @@ public:
     void handle() const;
 
 private:
-    std::shared_ptr<Collidable> party1;
-    std::shared_ptr<Collidable> party2;
+    Physical* party1;
+    Physical* party2;
 
-    static uint64_t make_id(const std::shared_ptr<Collidable>& p1, const std::shared_ptr<Collidable>& p2);
+    static uint64_t make_id(const Physical* p1, const Physical* p2);
 };
 
 // support for std::unordered_* containers 

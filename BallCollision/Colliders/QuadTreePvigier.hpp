@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include <functional>
 
-#include "collision_detector.h"
+#include "collision_detector.hpp"
 #include "pvigier/Box.h"
 #include "pvigier/Quadtree.h"
 
@@ -16,13 +16,10 @@ class QuadTreePvigier : CollisionDetector
 {
 public:
     
-    explicit QuadTreePvigier(const std::vector<std::shared_ptr<Collidable>> & objects);
+    explicit QuadTreePvigier();
     
     void detect_collisions(
-        const std::vector<std::shared_ptr<Collidable>> & agents,
-        const int index,
-        std::vector<std::pair<uint32_t, uint32_t>>& colliding_pairs,
-        int* collision_test_counter = nullptr
+        std::vector<int>& proxy, const float x, const float y, const float r, const int id
     ) override;
 
 private:

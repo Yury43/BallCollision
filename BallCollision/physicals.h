@@ -1,28 +1,26 @@
 #pragma once
 
-#include <SFML/System/Vector2.hpp>
-#include <vector>
+#include "Colliders/Collidable.hpp"
 #include "vector_math.h"
 
 // Abstract physical object parenting Ball and (previously) Line 
 
-class Collidable
+
+class Physical : public Collidable
 {
 public:
-    const uint32_t id;
-    sf::Vector2f p = { 0, 0 };
     
-    Collidable() : id(next_id++) { }
+    Physical() : Collidable(next_id++) { }
 
-    Collidable(const Collidable &_) = delete;
-    Collidable(Collidable &&_) = delete;
+    Physical(const Physical &_) = delete;
+    Physical(Physical &&_) = delete;
     
-    virtual ~Collidable() = default;
+    ~Physical() override = default;
 
     virtual bool is_touching(const Collidable* other) const = 0;
-    virtual float span() const = 0;
     
-    virtual void handle_collision(Collidable* other) = 0;
+    
+    virtual void handle_collision(Physical* other) = 0;
     virtual void update_position(float deltaTime) = 0;
     virtual void apply_reactions() = 0;
     virtual bool handle_wall_collision(float left, float top, float right, float bottom) = 0;

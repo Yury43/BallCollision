@@ -12,10 +12,10 @@
 #include "disjoined_set_union.h"
 #include "collision.h"
 #include "profiler.h"
-#include "QuadTreeAntymon.h"
-#include "QuadTreeLazy.hpp"
-#include "QuadTreeLight.hpp"
-#include "QuadTreePvigier.h"
+// #include "Colliders/QuadTreeLight.hpp"
+#include "Colliders/QuadTreeAntymon.hpp"
+#include "Colliders/QuadTreeLazy.hpp"
+// #include "Colliders/QuadTreePvigier.hpp"
 
 
 
@@ -30,9 +30,9 @@ Engine::Engine()
     // init_angled2(agents);
     // init_size(agents);
     
-    for (const auto & item : agents)
+    for (auto & item : agents)
     {
-        objects_by_id[item->id] = item;
+        objects_by_id[item->id] = item.get();
     }
 }
 
@@ -45,7 +45,32 @@ struct PairComp{
     }
 };
 
-std::vector<std::shared_ptr<Collidable>> Engine::run_iteration(const float delta_time)
+std::vector<std::pair<uint32_t, uint32_t>> Engine::brutforce()
+{
+    std::vector<std::pair<uint32_t, uint32_t>> colliding_pairs2;
+    PROFILE_NAMED("brutforce");
+    
+    for (int i = 0; i < agents.size(); ++i)
+    {
+        for (int j = i + 1; j < agents.size(); ++j)
+        {
+            if (j != i)
+            {
+                if (dynamic_cast<Ball*>(agents[i].get())->is_touching(agents[j].get()))
+                {
+                    colliding_pairs2.push_back({
+                        std::min(agents[i]->id, agents[j]->id),
+                        std::max(agents[i]->id, agents[j]->id)
+                    });
+                }
+            }
+        }
+    }
+
+    return colliding_pairs2;
+}
+
+std::vector<std::shared_ptr<Physical>> Engine::run_iteration(const float delta_time)
 {
     PROFILE_NAMED("Engine::run_iteration");
     
@@ -68,7 +93,6 @@ std::vector<std::shared_ptr<Collidable>> Engine::run_iteration(const float delta
         // QuadTreeAntymon collision_detector(0, 0, WINDOW_X, WINDOW_X, 40, 1000);
         
         std::vector<std::pair<uint32_t, uint32_t>> colliding_pairs; 
-        std::vector<std::pair<uint32_t, uint32_t>> colliding_pairs2;
         int collision_test_count = 0;
         
         {
@@ -79,37 +103,40 @@ std::vector<std::shared_ptr<Collidable>> Engine::run_iteration(const float delta
                 // PROFILE();
                 
                 // Test and handle collision with walls 
-                // Wall collisions have higher priority 
-                if (!agents[i]->handle_wall_collision(0, 0, WINDOW_X, WINDOW_Y))
+                // Wall collisions have higher priority
+                Ball* item = agents[i].get();
+                if (!(agents[i].get())->handle_wall_collision(0, 0, WINDOW_X, WINDOW_Y))
                 {
                     // Test collision with other balls
                 }
                 
-                collision_detector.detect_collisions(agents, i, colliding_pairs, &collision_test_count);
-                collision_detector.add(agents[i].get());
+                std::vector<int> proxy;
+                collision_detector.detect_collisions(proxy, item->p.x, item->p.y, item->R, i);
+                
+                for (const int& j : proxy)
+                {
+                    const Ball* other = agents[j].get();
+                    if (item->id != other->id)
+                    {
+                        collision_test_count++;
+            
+                        if (item->is_touching(other))
+                        {
+                            // colliding_pairs.push_back({ std::min(that->id, other->id) , std::max(that->id, other->id)});
+                            colliding_pairs.push_back({item->id, other->id});
+                        }    
+                    }
+                }
+
+                collision_detector.add(item->p.x, item->p.y, item->R, i);
             }
         }
 
-        std::cout << collision_test_count << std::endl;
+        std::cout << "collision_test_count: " << collision_test_count << " colliding_pairs: " << colliding_pairs.size() << std::endl;
         
-        if (false)
+        // if (false)
         {
-            for (int i = 0; i < agents.size(); ++i)
-            {
-                for (int j = i + 1; j < agents.size(); ++j)
-                {
-                    if (j != i)
-                    {
-                        if (agents[i]->is_touching(agents[j].get()))
-                        {
-                            colliding_pairs2.push_back({
-                                std::min(agents[i]->id, agents[j]->id),
-                                std::max(agents[i]->id, agents[j]->id)
-                            });
-                        }
-                    }
-                }
-            }
+            std::vector<std::pair<uint32_t, uint32_t>> colliding_pairs2 = brutforce();
 
             if (colliding_pairs.size() != colliding_pairs2.size())
             {
@@ -121,30 +148,36 @@ std::vector<std::shared_ptr<Collidable>> Engine::run_iteration(const float delta
                 std::set_difference(a.begin(), a.end(), b.begin(), b.end(), std::back_inserter(diff_ab));
                 std::set_difference(b.begin(), b.end(), a.begin(), a.end(), std::back_inserter(diff_ba));
 
-                std::cout << "extra: " << std::endl;
-                for (const auto & p : diff_ab)
+                std::cout << "extra: " << diff_ab.size() << std::endl;
+                if (false)
                 {
-                    const Ball* b1 = dynamic_cast<const Ball*>(objects_by_id[p.first].get());
-                    const Ball* b2 = dynamic_cast<const Ball*>(objects_by_id[p.second].get());
-                    std::cout << b1->id << "x" << b2->id << "\t";
-                    std::cout << "C1: " << b1->p << "\tR1: " << b1->R << "\t" ;
-                    std::cout << "C2: " << b2->p << "\tR2: " << b2->R << "\t" ;
-                    std::cout << "R12: " << (b1->R + b2->R) << "\t";
-                    std::cout << "dist: " << dist(b1->p, b2->p) << " ";
-                    std::cout << std::endl;
+                    for (const auto & p : diff_ab)
+                    {
+                        const Ball* b1 = dynamic_cast<const Ball*>(objects_by_id[p.first]);
+                        const Ball* b2 = dynamic_cast<const Ball*>(objects_by_id[p.second]);
+                        std::cout << b1->id << "x" << b2->id << "\t";
+                        std::cout << "C1: " << b1->p << "\tR1: " << b1->R << "\t" ;
+                        std::cout << "C2: " << b2->p << "\tR2: " << b2->R << "\t" ;
+                        std::cout << "R12: " << (b1->R + b2->R) << "\t";
+                        std::cout << "dist: " << dist(b1->p, b2->p) << " ";
+                        std::cout << std::endl;
+                    }
                 }
 
-                std::cout << "missing: " << std::endl;
-                for (const auto & p : diff_ba)
+                std::cout << "missing: " << diff_ba.size() << std::endl;
+                if (false)
                 {
-                    const Ball* b1 = dynamic_cast<const Ball*>(objects_by_id[p.first].get());
-                    const Ball* b2 = dynamic_cast<const Ball*>(objects_by_id[p.second].get());
-                    std::cout << b1->id << "x" << b2->id << "\t";
-                    std::cout << "C1: " << b1->p << "\tR1: " << b1->R << "\t" ;
-                    std::cout << "C2: " << b2->p << "\tR2: " << b2->R << "\t" ;
-                    std::cout << "R12: " << (b1->R + b2->R) << "\t";
-                    std::cout << "dist: " << dist(b1->p, b2->p) << " ";
-                    std::cout << std::endl;
+                    for (const auto & p : diff_ba)
+                    {
+                        const Ball* b1 = dynamic_cast<const Ball*>(objects_by_id[p.first]);
+                        const Ball* b2 = dynamic_cast<const Ball*>(objects_by_id[p.second]);
+                        std::cout << b1->id << "x" << b2->id << "\t";
+                        std::cout << "C1: " << b1->p << "\tR1: " << b1->R << "\t" ;
+                        std::cout << "C2: " << b2->p << "\tR2: " << b2->R << "\t" ;
+                        std::cout << "R12: " << (b1->R + b2->R) << "\t";
+                        std::cout << "dist: " << dist(b1->p, b2->p) << " ";
+                        std::cout << std::endl;
+                    }
                 }
 
                 assert(colliding_pairs.size() == colliding_pairs2.size());
@@ -207,8 +240,7 @@ std::vector<std::shared_ptr<Collidable>> Engine::run_iteration(const float delta
             // Calculate total kinetic energy change to control accuracy of simulation 
 
             double total_energy = std::accumulate(agents.begin(), agents.end(), 0., [](double sum, const auto& item) {
-                auto ball = dynamic_cast<Ball*>(item.get());
-                return ball ? sum + ball->energy() : sum;
+                return item ? sum + item->energy() : sum;
             });
 
             if (initial_energy < 0)
@@ -239,11 +271,11 @@ std::vector<std::shared_ptr<Collidable>> Engine::run_iteration(const float delta
         move_objects(delta_time);
     }
 
-    std::vector<std::shared_ptr<Collidable>> ready_objects;
+    std::vector<std::shared_ptr<Physical>> ready_objects;
     ready_objects.reserve(agents.size());
     for (const auto & o : agents)
     {
-        auto ball_ptr = dynamic_cast<Ball*>(o.get());
+        auto ball_ptr = o;
         if (ball_ptr)
             ready_objects.push_back(std::make_unique<Ball>(*ball_ptr));
     }
@@ -254,9 +286,9 @@ std::vector<std::shared_ptr<Collidable>> Engine::run_iteration(const float delta
 
 
 
-void Engine::move_objects(const float deltaTime) const
+void Engine::move_objects(const float deltaTime)
 {
-    for (auto & item : agents)
+    for (auto& item : agents)
     {
         item->update_position(deltaTime);
     }

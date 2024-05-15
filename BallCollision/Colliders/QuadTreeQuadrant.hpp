@@ -3,9 +3,6 @@
 #include <type_traits>
 
 
-
-
-
 // stores LTRB, more mem, less math
 template<typename T, typename = typename std::enable_if<std::is_arithmetic<T>::value>::type>
 struct Quadrant

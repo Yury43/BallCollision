@@ -5,8 +5,8 @@
 constexpr int WINDOW_X = 1024 * 2;
 constexpr int WINDOW_Y = 768 * 2;
 //constexpr int WINDOW_Y = 1024;
-constexpr int MAX_BALLS = 20000;
-constexpr int MIN_BALLS = 20000;
+constexpr int MAX_BALLS = 200;
+constexpr int MIN_BALLS = 200;
 constexpr int MIN_R = 2;
 constexpr int MAX_R = 12;
 constexpr float M_PI = 3.1415926f;

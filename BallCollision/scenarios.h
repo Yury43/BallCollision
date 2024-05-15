@@ -11,7 +11,7 @@
 // Different testing scenarios 
 
 // randomly initialize balls
-inline void init_random(std::vector<std::shared_ptr<Collidable>>& objects)
+inline void init_random(std::vector<std::shared_ptr<Ball>>& objects)
 {
     std::mt19937 rand_gen = RandGen::get();
     int nballs = (rand_gen() % (MAX_BALLS - MIN_BALLS + 1) + MIN_BALLS - 1);
@@ -32,7 +32,7 @@ inline void init_random(std::vector<std::shared_ptr<Collidable>>& objects)
     }
 }
 
-inline void init_corner_bounce(std::vector<std::shared_ptr<Collidable>>& objects)
+inline void init_corner_bounce(std::vector<std::shared_ptr<Physical>>& objects)
 {
     Ball ball;
 
@@ -53,7 +53,7 @@ inline void init_corner_bounce(std::vector<std::shared_ptr<Collidable>>& objects
     objects.push_back(std::make_shared<Ball>(ball));
 }
 
-inline void init_chain(std::vector<std::shared_ptr<Collidable>>& objects)
+inline void init_chain(std::vector<std::shared_ptr<Physical>>& objects)
 {
     float R = 20;
 
@@ -79,7 +79,7 @@ inline void init_chain(std::vector<std::shared_ptr<Collidable>>& objects)
     objects.push_back(std::make_shared<Ball>(ball));
 }
 
-inline void init_snooker(std::vector<std::shared_ptr<Collidable>>& objects)
+inline void init_snooker(std::vector<std::shared_ptr<Physical>>& objects)
 {
     float R = 20;
 
@@ -118,7 +118,7 @@ inline void init_snooker(std::vector<std::shared_ptr<Collidable>>& objects)
     }
 }
 
-inline void init_angled1(std::vector<std::shared_ptr<Collidable>>& objects)
+inline void init_angled1(std::vector<std::shared_ptr<Physical>>& objects)
 {
     float R = 20;
 
@@ -140,7 +140,7 @@ inline void init_angled1(std::vector<std::shared_ptr<Collidable>>& objects)
     objects.push_back(std::make_shared<Ball>(ball));
 }
 
-inline void init_angled2(std::vector<std::shared_ptr<Collidable>>& objects)
+inline void init_angled2(std::vector<std::shared_ptr<Physical>>& objects)
 {
     float R = 20;
 
@@ -162,7 +162,7 @@ inline void init_angled2(std::vector<std::shared_ptr<Collidable>>& objects)
     objects.push_back(std::make_shared<Ball>(ball));
 }
 
-inline void init_size(std::vector<std::shared_ptr<Collidable>>& objects)
+inline void init_size(std::vector<std::shared_ptr<Physical>>& objects)
 {
     float R = 20;
 

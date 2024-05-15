@@ -1,9 +1,7 @@
 #include "collision.h"
 
 
-Collision::Collision(
-    const std::shared_ptr<Collidable>& p1,
-    const std::shared_ptr<Collidable>& p2)
+Collision::Collision(Physical* p1,Physical* p2)
     : cid(make_id(p1, p2)), party1(p1), party2(p2)
 {
 
@@ -11,12 +9,12 @@ Collision::Collision(
 
 bool Collision::are_touching() const
 {
-    return party1->is_touching(party2.get());
+    return party1->is_touching(party2);
 }
 
 void Collision::handle() const
 {
-    return party1->handle_collision(party2.get());
+    return party1->handle_collision(party2);
 }
 
 void Collision::mark_started() const
@@ -31,7 +29,7 @@ void Collision::mark_finished() const
     party2->mark_colliding(false);
 }
 
-uint64_t Collision::make_id(const std::shared_ptr<Collidable>& p1, const std::shared_ptr<Collidable>& p2)
+uint64_t Collision::make_id(const Physical* p1, const Physical* p2)
 {
     int high = p1->id;
     int low = p2->id;

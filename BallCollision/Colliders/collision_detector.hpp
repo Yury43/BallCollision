@@ -1,9 +1,13 @@
 ﻿#pragma once
-#include <memory>
-#include <optional>
+#include <vector>
 
-#include "physicals.h"
-
+struct ContentItem
+{
+    float x;
+    float y;
+    float r;
+    int i;
+};
 
 class CollisionDetector
 {
@@ -18,14 +22,8 @@ public:
     // CollisionDetector operator =(CollisionDetector) = delete;
     auto operator=(const CollisionDetector &) -> CollisionDetector & = delete;
     
-    virtual void detect_collisions(
-        const std::vector<std::shared_ptr<Collidable>> & agents,
-        const int index,
-        std::vector<std::pair<uint32_t, uint32_t>>& colliding_pairs,
-        int* collision_test_counter = nullptr
-    ) = 0;
-
-    virtual void add(const Collidable* c) = 0;
+    virtual void detect_collisions(std::vector<int>& proxy, float x, float y, float r, int id) = 0;
+    virtual void add(float x, float y, float r, int i) = 0;
 };
 
 

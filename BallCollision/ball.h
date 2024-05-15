@@ -7,7 +7,7 @@ struct Reaction
     sf::Vector2f corrected_position = { 0, 0 };
 };
 
-class Ball : public Collidable
+class Ball : public Physical
 {
 public:
     sf::Vector2f dir = { 0, 0 };
@@ -18,7 +18,8 @@ public:
     Ball() = default;
 
     Ball(const Ball& other);
-    Ball(Ball &&_) = delete;
+    Ball(Ball &&other);
+    
     Ball operator =(const Ball & _) = delete;
     Ball& operator =(const Ball && _) = delete;
     
@@ -27,7 +28,7 @@ public:
     bool is_touching(const Collidable* other) const override;
 
     void mark_colliding(bool is_colliding) override;
-    void handle_collision(Collidable* other) override;
+    void handle_collision(Physical* other) override;
     void update_position(float deltaTime) override;
     std::unique_ptr<sf::Shape> get_drawing_shape() override;
 
