@@ -26,7 +26,7 @@ void LazyQuadTree::detect_collisions(std::vector<int>& proxy, const float x, con
 // subquadrants are not initialized on purpose 
 LazyQuadTreeNode::LazyQuadTreeNode(const Quad & q_) :
 quadrant(q_)
-, subquadrants(q_.divide())
+// , subquadrants(q_.divide())
 {
     assert(quadrant.l < quadrant.r && quadrant.t < quadrant.b);
 }
@@ -34,6 +34,7 @@ quadrant(q_)
 LazyQuadTreeNode* LazyQuadTreeNode::get_next_node(const float x, const float y)
 {
     // subquadrants = quadrant.divide();
+    Quad::Subdivision subquadrants = quadrant.divide();
     
     for (int i = 0; i < 4; ++i)
     {
@@ -185,11 +186,14 @@ void LazyQuadTreeNode::query_range(std::vector<int>& collection, const Quad & lo
     {
         for (int i = 0; i < 4; ++i)
         {
-            if (subquadrants[i].intersects(loc))
+            // if (subquadrants[i].intersects(loc))
             {
                 if (leaves[i])
                 {
-                    leaves[i]->query_range(collection, loc);
+                    if (leaves[i]->quadrant.intersects(loc))
+                    {
+                        leaves[i]->query_range(collection, loc);
+                    }
                 }
             }
         }  

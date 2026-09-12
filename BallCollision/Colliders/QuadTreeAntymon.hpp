@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include <vector>
 
-#include "collision_detector.hpp"
+#include "CollisionDetector.hpp"
 #include "antymon/Quadtree.h"
 
 class QuadTreeAntymon : public CollisionDetector

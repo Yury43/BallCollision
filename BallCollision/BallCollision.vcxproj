@@ -459,9 +459,8 @@
     <ClInclude Include="Colliders\antymon\IntList.h" />
     <ClInclude Include="Colliders\antymon\Quadtree.h" />
     <ClInclude Include="Colliders\BinGrid.hpp" />
-    <ClInclude Include="Colliders\Brut.hpp" />
     <ClInclude Include="Colliders\Collidable.hpp" />
-    <ClInclude Include="Colliders\collision_detector.hpp" />
+    <ClInclude Include="Colliders\CollisionDetector.hpp" />
     <ClInclude Include="Colliders\GridLoose.hpp" />
     <ClInclude Include="Colliders\GridUniform.hpp" />
     <ClInclude Include="Colliders\pvigier\Box.h" />

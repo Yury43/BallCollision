@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include <functional>
 
-#include "collision_detector.hpp"
+#include "CollisionDetector.hpp"
 #include "pvigier/Box.h"
 #include "pvigier/Quadtree.h"
 

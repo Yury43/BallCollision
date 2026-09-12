@@ -1,5 +1,5 @@
 ﻿#pragma once
-#include "collision_detector.hpp"
+#include "CollisionDetector.hpp"
 #include "constants.h"
 #include <iostream>
 #include <vector>

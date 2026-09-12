@@ -3,7 +3,7 @@
 #include <memory>
 #include <vector>
 
-#include "collision_detector.hpp"
+#include "CollisionDetector.hpp"
 #include "QuadTreeQuadrant.hpp"
 
 
@@ -42,7 +42,7 @@ public:
 private:
 
     Quad quadrant;
-    Quad::Subdivision subquadrants;
+    // Quad::Subdivision subquadrants;
     std::array<std::unique_ptr<LazyQuadTreeNode>, 4> leaves;
     // std::array<LazyQuadTreeNode*, 4> leaves = {0, 0, 0, 0};
     bool got_leaves = false;

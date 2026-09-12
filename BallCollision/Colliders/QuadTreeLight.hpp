@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include <list>
 
-#include "collision_detector.hpp"
+#include "CollisionDetector.hpp"
 #include "QuadTreeQuadrant.hpp"
 
 

@@ -89,8 +89,8 @@ std::vector<std::shared_ptr<Physical>> Engine::run_iteration(const float delta_t
     {
         // QuadTreePvigier collision_detector(agents);
         // LightQuadTree collision_detector(0, 0, WINDOW_X, WINDOW_X);
-        LazyQuadTree collision_detector(0, 0, WINDOW_X, WINDOW_X);
         // QuadTreeAntymon collision_detector(0, 0, WINDOW_X, WINDOW_X, 40, 1000);
+        LazyQuadTree collision_detector(0, 0, WINDOW_X, WINDOW_X);
         
         std::vector<std::pair<uint32_t, uint32_t>> colliding_pairs; 
         int collision_test_count = 0;
@@ -134,7 +134,7 @@ std::vector<std::shared_ptr<Physical>> Engine::run_iteration(const float delta_t
 
         std::cout << "collision_test_count: " << collision_test_count << " colliding_pairs: " << colliding_pairs.size() << std::endl;
         
-        // if (false)
+        if (false)
         {
             std::vector<std::pair<uint32_t, uint32_t>> colliding_pairs2 = brutforce();
 
